@@ -493,6 +493,17 @@ def find_background_asset() -> Path | None:
     return None
 
 
+def find_define_banner_asset() -> Path | None:
+    explicit = ASSETS_DIR / "Gemini_Generated_Image_yjg84syjg84syjg8.png"
+    if explicit.exists():
+        return explicit
+
+    generated = sorted(ASSETS_DIR.glob("Gemini_Generated_Image_*.png"))
+    if generated:
+        return generated[0]
+    return None
+
+
 def apply_theme(background_path: Path | None) -> None:
     bg_css = ""
     if background_path:
@@ -549,6 +560,7 @@ def apply_theme(background_path: Path | None) -> None:
 
         p, label, li, input, textarea {{
             font-family: 'Share Tech Mono', monospace !important;
+            font-size: 1.01rem;
         }}
 
         /* Preserve Streamlit icon glyphs so labels don't render as text tokens like "upload" or "arrow_right". */
@@ -572,6 +584,13 @@ def apply_theme(background_path: Path | None) -> None:
         .stFileUploader label,
         .stToggle label {{
             color: #cbffc2 !important;
+            font-size: 0.98rem !important;
+            font-weight: 700 !important;
+            letter-spacing: 0.03em;
+        }}
+
+        .stCaption {{
+            font-size: 0.93rem !important;
         }}
 
         .stTextInput input,
@@ -692,8 +711,8 @@ def apply_theme(background_path: Path | None) -> None:
 
         .preset-ticker-lane {{
             position: absolute;
-            left: 12.45%;
-            right: 15.25%;
+            left: 10.85%;
+            right: 3.2%;
             top: 33.2%;
             height: 34.2%;
             overflow: hidden;
@@ -713,6 +732,12 @@ def apply_theme(background_path: Path | None) -> None:
             line-height: 1;
             padding-left: 100%;
             animation: spooler-marquee 76s linear infinite;
+        }}
+
+        .define-banner-wrap {{
+            width: min(94%, 1220px);
+            margin: 2px auto 10px;
+            filter: drop-shadow(0 12px 24px rgba(40, 102, 169, 0.28));
         }}
 
         textarea[aria-label="Environment Prompt"] {{
@@ -1325,12 +1350,18 @@ with top_meta_col:
     st.caption("v1.4.0 · streamlined quick setup with optional deep control")
 
 st.markdown('<div class="hero-card">', unsafe_allow_html=True)
-st.title("Define Your Runtime Scenario")
+define_banner_path = find_define_banner_asset()
+if define_banner_path:
+    st.markdown('<div class="define-banner-wrap">', unsafe_allow_html=True)
+    st.image(str(define_banner_path), width="stretch")
+    st.markdown("</div>", unsafe_allow_html=True)
+else:
+    st.title("Define Your Runtime Scenario")
 st.caption("Type what you want, pick a preset and challenge level, then build. Advanced mode exposes full controls.")
 st.text_area(
     "Environment Prompt",
     key="quick_prompt",
-    placeholder="Example: build a harsh network profile with retry pressure and auth edge-case validation.",
+    placeholder="Example: validate generated patch behavior under high latency, packet loss, and auth edge-case pressure.",
     height=86,
 )
 maybe_render_guide(
