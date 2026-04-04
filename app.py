@@ -503,6 +503,15 @@ def apply_theme(background_path: Path | None) -> None:
         <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Share+Tech+Mono&display=swap');
 
+        :root {{
+            --glass-bg: rgba(10, 20, 34, 0.62);
+            --glass-bg-strong: rgba(8, 16, 28, 0.82);
+            --glass-border: rgba(162, 206, 255, 0.34);
+            --glass-glow: rgba(118, 181, 255, 0.28);
+            --text-strong: #f7fbff;
+            --text-soft: #dcefff;
+        }}
+
         .stApp {{
             {bg_css}
             background-size: cover;
@@ -558,29 +567,51 @@ def apply_theme(background_path: Path | None) -> None:
         .stSelectbox div[data-baseweb='select'] > div,
         .stSlider [data-baseweb='slider'],
         .stFileUploader section {{
-            background: rgba(9, 21, 11, 0.9) !important;
-            border: 1px solid rgba(133, 255, 112, 0.4) !important;
-            color: #d6ffd0 !important;
+            background: var(--glass-bg) !important;
+            border: 1px solid var(--glass-border) !important;
+            color: var(--text-strong) !important;
+            border-radius: 12px !important;
+            backdrop-filter: blur(10px) saturate(130%);
+            transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+        }}
+
+        .stTextInput input:hover,
+        .stTextArea textarea:hover,
+        .stSelectbox div[data-baseweb='select'] > div:hover,
+        .stFileUploader section:hover {{
+            border-color: rgba(189, 221, 255, 0.7) !important;
+            box-shadow: 0 0 0 1px rgba(189, 221, 255, 0.2), 0 8px 24px rgba(43, 104, 173, 0.22) !important;
+            transform: translateY(-1px);
+        }}
+
+        .stTextInput input:focus,
+        .stTextArea textarea:focus,
+        .stSelectbox div[data-baseweb='select'] > div:focus-within {{
+            border-color: rgba(204, 230, 255, 0.9) !important;
+            box-shadow: 0 0 0 2px rgba(149, 203, 255, 0.25), 0 10px 28px rgba(54, 123, 201, 0.3) !important;
         }}
 
         .stButton > button,
         .stDownloadButton > button,
         button[kind='primary'] {{
-            background: linear-gradient(90deg, #6edb3f, #4da82e) !important;
-            color: #041006 !important;
-            border: 1px solid #9dff7e !important;
+            background: linear-gradient(115deg, #dff4ff, #a8daff 55%, #88c8ff) !important;
+            color: #06223a !important;
+            border: 1px solid rgba(213, 236, 255, 0.95) !important;
             border-radius: 999px !important;
             font-family: 'Orbitron', 'Share Tech Mono', monospace !important;
             letter-spacing: 0.07em;
             text-transform: uppercase;
             font-weight: 700 !important;
+            box-shadow: 0 8px 22px rgba(60, 129, 199, 0.35);
+            transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
         }}
 
         .stButton > button:hover,
         .stDownloadButton > button:hover,
         button[kind='primary']:hover {{
-            filter: brightness(1.07);
-            box-shadow: 0 0 20px rgba(130, 255, 103, 0.5);
+            filter: brightness(1.04);
+            transform: translateY(-2px);
+            box-shadow: 0 12px 28px rgba(67, 141, 219, 0.45), 0 0 18px rgba(155, 210, 255, 0.5);
         }}
 
         section[data-testid='stSidebar'] {{
@@ -597,45 +628,162 @@ def apply_theme(background_path: Path | None) -> None:
         }}
 
         .hero-card {{
-            border: 1px solid rgba(130, 255, 103, 0.35);
-            border-radius: 12px;
+            border: 1px solid rgba(173, 214, 255, 0.42);
+            border-radius: 16px;
             padding: 14px 18px;
             margin-bottom: 12px;
-            background: rgba(0, 0, 0, 0.42);
-            backdrop-filter: blur(4px);
+            background: linear-gradient(145deg, rgba(13, 24, 40, 0.78), rgba(8, 16, 28, 0.65));
+            backdrop-filter: blur(12px) saturate(130%);
+            box-shadow: 0 16px 40px rgba(16, 47, 84, 0.38), inset 0 1px 0 rgba(228, 242, 255, 0.12);
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }}
+
+        .hero-card:hover {{
+            border-color: rgba(200, 228, 255, 0.72);
+            box-shadow: 0 18px 44px rgba(21, 66, 118, 0.42), inset 0 1px 0 rgba(244, 251, 255, 0.2);
         }}
 
         .section-label {{
             font-family: 'Orbitron', 'Share Tech Mono', monospace;
-            color: #a5ff87;
+            color: #ecf7ff;
             letter-spacing: 0.08em;
             font-size: 1.1rem;
             margin-top: 8px;
             margin-bottom: 8px;
             text-transform: uppercase;
+            text-shadow: 0 0 14px rgba(155, 209, 255, 0.35);
         }}
 
         .preset-ticker-shell {{
-            border: 1px solid rgba(133, 255, 112, 0.55);
-            border-radius: 999px;
-            background: rgba(5, 18, 8, 0.75);
-            box-shadow: 0 0 16px rgba(116, 255, 91, 0.24);
-            overflow: hidden;
-            white-space: nowrap;
-            padding: 7px 0;
+            position: relative;
             margin-top: 4px;
             margin-bottom: 12px;
         }}
 
+        .preset-ticker-viewport {{
+            border: 1px solid rgba(170, 214, 255, 0.54);
+            border-radius: 999px;
+            background: linear-gradient(110deg, rgba(11, 24, 40, 0.82), rgba(8, 19, 32, 0.72));
+            box-shadow: 0 10px 24px rgba(33, 89, 151, 0.28), inset 0 1px 0 rgba(231, 244, 255, 0.15);
+            overflow: hidden;
+            white-space: nowrap;
+            padding: 8px 0;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+        }}
+
+        .preset-ticker-shell:hover .preset-ticker-viewport {{
+            border-color: rgba(205, 231, 255, 0.88);
+            box-shadow: 0 14px 30px rgba(44, 107, 176, 0.34), 0 0 18px rgba(158, 211, 255, 0.33);
+            transform: translateY(-1px);
+        }}
+
         .preset-ticker-track {{
             display: inline-block;
-            color: #a5ff87;
-            text-shadow: 0 0 10px rgba(130, 255, 103, 0.55);
+            color: #eef8ff;
+            text-shadow: 0 0 10px rgba(131, 191, 255, 0.35);
             font-family: 'Orbitron', 'Share Tech Mono', monospace;
             letter-spacing: 0.04em;
             font-size: 0.87rem;
             padding-left: 100%;
-            animation: spooler-marquee 38s linear infinite;
+            animation: spooler-marquee 76s linear infinite;
+        }}
+
+        .preset-ticker-shell:hover .preset-ticker-track {{
+            animation-play-state: paused;
+        }}
+
+        .settings-popover {{
+            position: absolute;
+            top: calc(100% + 12px);
+            left: 50%;
+            transform: translate(-50%, 8px);
+            width: min(820px, 96vw);
+            border: 1px solid rgba(179, 219, 255, 0.72);
+            border-radius: 14px;
+            background: linear-gradient(140deg, rgba(7, 16, 30, 0.9), rgba(8, 20, 36, 0.82));
+            backdrop-filter: blur(14px) saturate(140%);
+            box-shadow: 0 18px 38px rgba(18, 49, 88, 0.48), 0 0 18px rgba(146, 204, 255, 0.2);
+            padding: 12px 14px;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            z-index: 25;
+            transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s ease;
+        }}
+
+        .settings-popover::before {{
+            content: "";
+            position: absolute;
+            top: -7px;
+            left: calc(50% - 7px);
+            width: 14px;
+            height: 14px;
+            background: rgba(9, 19, 34, 0.95);
+            border-top: 1px solid rgba(179, 219, 255, 0.72);
+            border-left: 1px solid rgba(179, 219, 255, 0.72);
+            transform: rotate(45deg);
+        }}
+
+        .preset-ticker-shell:hover .settings-popover {{
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+            transform: translate(-50%, 0);
+        }}
+
+        .settings-popover-title {{
+            color: #f5fbff;
+            font-family: 'Orbitron', 'Share Tech Mono', monospace;
+            font-size: 0.82rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }}
+
+        .settings-popover-grid {{
+            display: grid;
+            grid-template-columns: repeat(2, minmax(240px, 1fr));
+            gap: 7px 18px;
+        }}
+
+        .settings-popover-row {{
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 10px;
+            border-bottom: 1px dashed rgba(153, 201, 248, 0.2);
+            padding-bottom: 4px;
+        }}
+
+        .settings-popover-key {{
+            color: #d9ecff;
+            font-size: 0.76rem;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            flex: 0 0 auto;
+        }}
+
+        .settings-popover-value {{
+            color: #ffffff;
+            font-size: 0.78rem;
+            line-height: 1.35;
+            text-align: right;
+            max-width: 62%;
+            overflow-wrap: anywhere;
+        }}
+
+        @media (max-width: 840px) {{
+            .settings-popover {{
+                width: min(640px, 96vw);
+            }}
+
+            .settings-popover-grid {{
+                grid-template-columns: 1fr;
+            }}
+
+            .settings-popover-value {{
+                max-width: 70%;
+            }}
         }}
 
         .guide-anchor-row {{
@@ -874,12 +1022,46 @@ def build_effective_settings_line() -> str:
     )
 
 
+def build_effective_settings_rows() -> list[tuple[str, str]]:
+    return [
+        ("Preset", st.session_state["selected_preset"]),
+        ("Challenge", st.session_state["difficulty_profile"]),
+        ("Network", NETWORK_OPTIONS[st.session_state["network_profile_label"]]),
+        ("Latency", f"{st.session_state['latency_ms']} ms"),
+        ("Packet Loss", f"{st.session_state['packet_loss_pct']}%"),
+        ("CPU Budget", CPU_OPTIONS[st.session_state["cpu_budget_label"]]),
+        ("Memory Budget", MEMORY_OPTIONS[st.session_state["memory_budget_label"]]),
+        ("Database", DB_OPTIONS[st.session_state["db_engine_label"]]),
+        ("Chaos Mode", "On" if st.session_state["chaos_mode"] else "Off"),
+        ("Vulnerable DOM", "On" if st.session_state["vulnerable_dom"] else "Off"),
+        ("SQL Injection Surface", "On" if st.session_state["sql_injection"] else "Off"),
+        ("Auth Bypass Path", "On" if st.session_state["auth_bypass"] else "Off"),
+        ("Third-Party Outage", "On" if st.session_state["third_party_outage"] else "Off"),
+        ("Strict Rate Limiting", "On" if st.session_state["strict_rate_limit"] else "Off"),
+    ]
+
+
 def render_preset_ticker() -> None:
     summary = escape(build_effective_settings_line())
+    popover_rows = "".join(
+        (
+            '<div class="settings-popover-row">'
+            f'<span class="settings-popover-key">{escape(name)}</span>'
+            f'<span class="settings-popover-value">{escape(value)}</span>'
+            "</div>"
+        )
+        for name, value in build_effective_settings_rows()
+    )
     st.markdown(
         (
             '<div class="preset-ticker-shell">'
+            '<div class="preset-ticker-viewport">'
             f'<div class="preset-ticker-track">{summary}&nbsp;&nbsp;&nbsp;&nbsp;{summary}</div>'
+            "</div>"
+            '<div class="settings-popover">'
+            '<div class="settings-popover-title">Active Environment Profile</div>'
+            f'<div class="settings-popover-grid">{popover_rows}</div>'
+            "</div>"
             "</div>"
         ),
         unsafe_allow_html=True,
