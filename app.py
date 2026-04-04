@@ -358,6 +358,7 @@ DEFAULT_STATE = {
     "difficulty_profile": "Preset Default",
     "advanced_mode": False,
     "show_guides": False,
+    "quick_prompt": "",
     "preset_initialized": False,
     "intent_text": "",
     "network_profile_label": "3G Degraded",
@@ -645,13 +646,13 @@ def apply_theme(background_path: Path | None) -> None:
 
         .section-label {{
             font-family: 'Orbitron', 'Share Tech Mono', monospace;
-            color: #ecf7ff;
+            color: #a5ff87;
             letter-spacing: 0.08em;
             font-size: 1.1rem;
             margin-top: 8px;
             margin-bottom: 8px;
             text-transform: uppercase;
-            text-shadow: 0 0 14px rgba(155, 209, 255, 0.35);
+            text-shadow: 0 0 14px rgba(130, 255, 103, 0.48);
         }}
 
         .preset-ticker-shell {{
@@ -679,13 +680,26 @@ def apply_theme(background_path: Path | None) -> None:
 
         .preset-ticker-track {{
             display: inline-block;
-            color: #eef8ff;
-            text-shadow: 0 0 10px rgba(131, 191, 255, 0.35);
+            color: #a5ff87;
+            text-shadow: 0 0 10px rgba(130, 255, 103, 0.58);
             font-family: 'Orbitron', 'Share Tech Mono', monospace;
             letter-spacing: 0.04em;
             font-size: 0.87rem;
             padding-left: 100%;
             animation: spooler-marquee 76s linear infinite;
+        }}
+
+        textarea[aria-label="Environment Prompt"] {{
+            background: rgba(255, 255, 255, 0.96) !important;
+            color: #0b1b2a !important;
+            border: 1px solid rgba(187, 220, 255, 0.85) !important;
+            border-radius: 12px !important;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 8px 20px rgba(43, 104, 173, 0.16);
+            font-family: 'Share Tech Mono', monospace !important;
+        }}
+
+        textarea[aria-label="Environment Prompt"]::placeholder {{
+            color: rgba(16, 36, 58, 0.58) !important;
         }}
 
         .preset-ticker-shell:hover .preset-ticker-track {{
@@ -1282,8 +1296,22 @@ with top_meta_col:
     st.caption("v1.4.0 · streamlined quick setup with optional deep control")
 
 st.markdown('<div class="hero-card">', unsafe_allow_html=True)
-st.title("Describe Your Environment")
-st.caption("Simple mode: pick a preset, set difficulty, inject code, and build. Advanced mode exposes full controls.")
+st.title("Define Your Runtime Scenario")
+st.caption("Type what you want, pick a preset and challenge level, then build. Advanced mode exposes full controls.")
+st.text_area(
+    "Environment Prompt",
+    key="quick_prompt",
+    placeholder="Example: build a harsh network profile with retry pressure and auth edge-case validation.",
+    height=86,
+)
+maybe_render_guide(
+    "Environment Prompt",
+    "Describe the outcome you want in plain language.",
+    [
+        "This prompt is the fastest way to describe run intent without opening advanced controls. Write one clear statement of what behavior you want to validate, and SPOOLER will carry it into the generated environment contract.",
+        "If both prompt and advanced intent are set, the prompt is used as the primary intent value. If prompt is empty, SPOOLER falls back to advanced intent and then preset name, so every package still has a meaningful objective label.",
+    ],
+)
 st.markdown("</div>", unsafe_allow_html=True)
 
 st.markdown('<div class="section-label">Quick Setup (Simple Mode)</div>', unsafe_allow_html=True)
@@ -1427,7 +1455,8 @@ if st.button("Build It", type="primary"):
     run_id = f"spool-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
     recipe_path = RECIPES_DIR / f"{run_id}.yml"
 
-    intent_value = st.session_state["intent_text"].strip()
+    prompt_value = st.session_state["quick_prompt"].strip()
+    intent_value = prompt_value or st.session_state["intent_text"].strip()
     if not intent_value:
         intent_value = st.session_state["selected_preset"]
     if st.session_state["difficulty_profile"] != "Preset Default":
