@@ -494,13 +494,9 @@ def find_background_asset() -> Path | None:
 
 
 def find_define_banner_asset() -> Path | None:
-    explicit = ASSETS_DIR / "Gemini_Generated_Image_yjg84syjg84syjg8.png"
+    explicit = ASSETS_DIR / "DEFINE.png"
     if explicit.exists():
         return explicit
-
-    generated = sorted(ASSETS_DIR.glob("Gemini_Generated_Image_*.png"))
-    if generated:
-        return generated[0]
     return None
 
 
@@ -712,7 +708,7 @@ def apply_theme(background_path: Path | None) -> None:
         .preset-ticker-lane {{
             position: absolute;
             left: 10.85%;
-            right: 3.2%;
+            right: 0.95%;
             top: 33.2%;
             height: 34.2%;
             overflow: hidden;
@@ -735,8 +731,8 @@ def apply_theme(background_path: Path | None) -> None:
         }}
 
         .define-banner-wrap {{
-            width: min(94%, 1220px);
-            margin: 2px auto 10px;
+            width: min(100%, 820px);
+            margin: 2px 0 8px auto;
             filter: drop-shadow(0 12px 24px rgba(40, 102, 169, 0.28));
         }}
 
@@ -1352,18 +1348,23 @@ with top_meta_col:
 st.markdown('<div class="hero-card">', unsafe_allow_html=True)
 define_banner_path = find_define_banner_asset()
 if define_banner_path:
-    st.markdown('<div class="define-banner-wrap">', unsafe_allow_html=True)
-    st.image(str(define_banner_path), width="stretch")
-    st.markdown("</div>", unsafe_allow_html=True)
+    _, banner_col = st.columns([1, 2])
+    with banner_col:
+        st.markdown('<div class="define-banner-wrap">', unsafe_allow_html=True)
+        st.image(str(define_banner_path), width="stretch")
+        st.markdown("</div>", unsafe_allow_html=True)
 else:
     st.title("Define Your Runtime Scenario")
-st.caption("Type what you want, pick a preset and challenge level, then build. Advanced mode exposes full controls.")
-st.text_area(
-    "Environment Prompt",
-    key="quick_prompt",
-    placeholder="Example: validate generated patch behavior under high latency, packet loss, and auth edge-case pressure.",
-    height=86,
-)
+    st.caption("Describe a custom-tailored scenario or use presets, then choose a challenge level and build.")
+
+prompt_left_col, prompt_center_col, prompt_right_col = st.columns([0.08, 0.84, 0.08])
+with prompt_center_col:
+    st.text_area(
+        "Environment Prompt",
+        key="quick_prompt",
+        placeholder="Example: validate generated patch behavior under high latency, packet loss, and auth edge-case pressure.",
+        height=66,
+    )
 maybe_render_guide(
     "Environment Prompt",
     "Describe the outcome you want in plain language.",
