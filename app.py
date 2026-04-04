@@ -499,6 +499,17 @@ def apply_theme(background_path: Path | None) -> None:
         encoded_bg = get_base64(background_path)
         bg_css = f"background-image: url('data:image/png;base64,{encoded_bg}');"
 
+    led_viewport_bg_css = "background: linear-gradient(110deg, rgba(11, 24, 40, 0.82), rgba(8, 19, 32, 0.72));"
+    led_scroller_path = ASSETS_DIR / "Spooler_led_scroller.png"
+    if led_scroller_path.exists():
+        encoded_led_scroller = get_base64(led_scroller_path)
+        led_viewport_bg_css = (
+            f"background-image: url('data:image/png;base64,{encoded_led_scroller}');"
+            "background-repeat: no-repeat;"
+            "background-position: center;"
+            "background-size: 100% 100%;"
+        )
+
     st.markdown(
         f"""
         <style>
@@ -662,29 +673,44 @@ def apply_theme(background_path: Path | None) -> None:
         }}
 
         .preset-ticker-viewport {{
-            border: 1px solid rgba(170, 214, 255, 0.54);
-            border-radius: 999px;
-            background: linear-gradient(110deg, rgba(11, 24, 40, 0.82), rgba(8, 19, 32, 0.72));
-            box-shadow: 0 10px 24px rgba(33, 89, 151, 0.28), inset 0 1px 0 rgba(231, 244, 255, 0.15);
+            position: relative;
+            width: 100%;
+            aspect-ratio: 3550 / 170;
+            min-height: 44px;
+            max-height: 92px;
+            border-radius: 12px;
             overflow: hidden;
-            white-space: nowrap;
-            padding: 8px 0;
-            transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+            {led_viewport_bg_css}
+            filter: drop-shadow(0 8px 18px rgba(33, 89, 151, 0.28));
+            transition: transform 0.2s ease, filter 0.2s ease;
         }}
 
         .preset-ticker-shell:hover .preset-ticker-viewport {{
-            border-color: rgba(205, 231, 255, 0.88);
-            box-shadow: 0 14px 30px rgba(44, 107, 176, 0.34), 0 0 18px rgba(158, 211, 255, 0.33);
             transform: translateY(-1px);
+            filter: drop-shadow(0 12px 24px rgba(45, 115, 187, 0.34));
+        }}
+
+        .preset-ticker-lane {{
+            position: absolute;
+            left: 12.45%;
+            right: 15.25%;
+            top: 33.2%;
+            height: 34.2%;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            pointer-events: none;
         }}
 
         .preset-ticker-track {{
             display: inline-block;
+            white-space: nowrap;
             color: #a5ff87;
-            text-shadow: 0 0 10px rgba(130, 255, 103, 0.58);
+            text-shadow: 0 0 8px rgba(130, 255, 103, 0.65), 0 0 14px rgba(116, 255, 91, 0.35);
             font-family: 'Orbitron', 'Share Tech Mono', monospace;
-            letter-spacing: 0.04em;
-            font-size: 0.87rem;
+            letter-spacing: 0.05em;
+            font-size: clamp(0.5rem, 0.74vw, 1.2rem);
+            line-height: 1;
             padding-left: 100%;
             animation: spooler-marquee 76s linear infinite;
         }}
@@ -1057,6 +1083,7 @@ def build_effective_settings_rows() -> list[tuple[str, str]]:
 
 def render_preset_ticker() -> None:
     summary = escape(build_effective_settings_line())
+    marquee_text = f"{summary}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{summary}"
     popover_rows = "".join(
         (
             '<div class="settings-popover-row">'
@@ -1070,7 +1097,9 @@ def render_preset_ticker() -> None:
         (
             '<div class="preset-ticker-shell">'
             '<div class="preset-ticker-viewport">'
-            f'<div class="preset-ticker-track">{summary}&nbsp;&nbsp;&nbsp;&nbsp;{summary}</div>'
+            '<div class="preset-ticker-lane">'
+            f'<div class="preset-ticker-track">{marquee_text}</div>'
+            "</div>"
             "</div>"
             '<div class="settings-popover">'
             '<div class="settings-popover-title">Active Environment Profile</div>'
