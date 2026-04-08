@@ -290,6 +290,39 @@ PRESET_SCENARIOS = {
     },
 }
 
+PRESET_AI_SECURITY_LENS = {
+    "Slow Mobile + Vulnerable DOM": (
+        "Tests AI-generated front-end resilience when degraded network and DOM-risk conditions overlap."
+    ),
+    "Auth Chaos Drill": (
+        "Stresses token lifecycle and auth edge cases, a common weak point in generated services."
+    ),
+    "SQL Storm + Tight Limits": (
+        "Simulates injection pressure plus rate limits to expose unsafe query generation and brittle retries."
+    ),
+    "Third-Party Timeout Cascade": (
+        "Checks how generated integrations handle dependency timeouts, fallback logic, and retry storms."
+    ),
+    "CPU Spike Recovery": (
+        "Validates backoff and queue behavior when generated code runs under CPU starvation."
+    ),
+    "Memory Pressure Leak Hunt": (
+        "Surfaces hidden memory leaks and crash paths in generated code under tight RAM constraints."
+    ),
+    "Packet Loss Retry Trap": (
+        "Focuses on retry correctness and idempotency when packets drop and requests duplicate."
+    ),
+    "Offline-First Failover": (
+        "Verifies degraded-mode behavior when generated services lose reliable network access."
+    ),
+    "No-DB Fallback Path": (
+        "Tests fallback correctness when generated code must run without external DB container support."
+    ),
+    "Full Chaos Fire Drill": (
+        "Combines auth, SQL, outage, and loss vectors where generated systems most often break."
+    ),
+}
+
 DIFFICULTY_PROFILES = {
     "Preset Default": {},
     "Mild": {
@@ -358,6 +391,8 @@ DEFAULT_STATE = {
     "difficulty_profile": "Preset Default",
     "advanced_mode": False,
     "show_guides": False,
+    "show_guides_toggle": False,
+    "ticker_reset_key": 0,
     "quick_prompt": "",
     "preset_initialized": False,
     "intent_text": "",
@@ -383,6 +418,186 @@ DEFAULT_STATE = {
     "ide_choice": "VS Code",
     "ide_concept_requested": False,
 }
+
+MANUAL_SECTIONS = [
+    {
+        "title": "What SPOOLER Does",
+        "overview": "SPOOLER is a scenario packaging workbench for testing code under controlled runtime pressure.",
+        "items": [
+            "Define a runtime scenario, choose pressure level, and generate reproducible artifacts.",
+            "Package both environment settings and injection payload into a single run definition.",
+            "Use the same scenario repeatedly for regression checks, patch validation, and handoff review.",
+            "Treat each run as a named experiment with clear intent and measurable stress conditions.",
+            "Use quick setup for speed, then switch to advanced controls for exact edge-case shaping.",
+        ],
+        "examples": [
+            "Validate auth refresh logic under high latency plus strict rate limiting.",
+            "Replay SQL guardrail testing under resource pressure and outage assumptions.",
+            "Package a reproducible outage drill for team-wide patch verification.",
+        ],
+        "action_label": "Start With Presets",
+        "action_id": "quick_setup",
+    },
+    {
+        "title": "Preset Scenarios",
+        "overview": "Presets are the fastest way to load a complete baseline with coherent defaults.",
+        "items": [
+            "Preset Scenario loads network profile, resources, risk posture, and payload defaults together.",
+            "Use presets when onboarding a run quickly or sharing a known testing pattern.",
+            "Preset selection should encode scenario theme first, then challenge level tunes pressure.",
+            "Changing preset updates intent context and baseline parameters as a bundle.",
+            "After preset load, use advanced controls only for targeted deviations.",
+        ],
+        "examples": [
+            "Use Slow Mobile + Vulnerable DOM to test frontend resilience under weak network conditions.",
+            "Use Full Chaos Fire Drill for stress-heavy reliability and fault tolerance checks.",
+            "Use No-DB Fallback Path to verify behavior when external DB container is absent.",
+        ],
+        "action_label": "Try Preset Setup In Tool",
+        "action_id": "quick_setup",
+    },
+    {
+        "title": "Challenge Levels",
+        "overview": "Challenge Level scales stress intensity on top of the selected preset.",
+        "items": [
+            "Preset Default keeps bundled preset values unchanged.",
+            "Mild lowers friction for baseline confidence checks.",
+            "Balanced applies realistic pressure suitable for routine validation.",
+            "Hard increases latency, instability, and reduced resources to surface brittle assumptions.",
+            "Extreme stacks hostile conditions and additional vulnerability pressure for break-point drills.",
+            "Use challenge changes to compare behavior across stress tiers without rebuilding everything.",
+        ],
+        "examples": [
+            "Run the same payload through Mild, Balanced, and Hard to map failure onset.",
+            "Use Extreme after a fix to verify no hidden brittle dependency remains.",
+            "Keep preset constant while changing challenge for apples-to-apples stress comparison.",
+        ],
+        "action_label": "Try Challenge Levels In Tool",
+        "action_id": "challenge_levels",
+    },
+    {
+        "title": "Advanced Mode and Core Controls",
+        "overview": "Advanced mode exposes full control over environment shape and execution context.",
+        "items": [
+            "Environment Intent defines the exact objective sentence embedded in run context.",
+            "Injection Language sets payload runtime family and default path/command templates.",
+            "Network Profile sets baseline transport context; latency and packet loss provide numeric pressure.",
+            "CPU Budget and Memory Budget control resource ceilings for reproducible performance stress.",
+            "DB Engine selects service flavor, including SQLite mode without a dedicated DB container.",
+            "Target Path Inside Container controls where injected payload is copied.",
+            "Optional Command After Injection controls post-copy execution behavior.",
+        ],
+        "examples": [
+            "Set Intent to 'validate retry backoff under outage and auth churn' for explicit traceability.",
+            "Pair Edge Failure + high packet loss with 1 vCPU to stress timeout logic.",
+            "Use SQLite mode and no run command when generating artifact-only packages for review.",
+        ],
+        "action_label": "Open Advanced Controls In Tool",
+        "action_id": "advanced_controls",
+    },
+    {
+        "title": "Security Toggles",
+        "overview": "Security and fault toggles mark the threat posture and instability assumptions for the run.",
+        "items": [
+            "Chaos Mode broadens instability assumptions for aggressive resilience testing.",
+            "Vulnerable DOM highlights client-side exploit-risk context.",
+            "SQL Injection Surface marks query-handling risk and sanitization pressure.",
+            "Auth Bypass Path stresses authn/authz boundary and token flow assumptions.",
+            "Third-Party Outage simulates unstable upstream dependencies.",
+            "Strict Rate Limiting enforces constrained request pacing assumptions.",
+        ],
+        "examples": [
+            "Combine SQL Injection Surface + Strict Rate Limiting to evaluate guardrails under pressure.",
+            "Enable Auth Bypass Path + Third-Party Outage to test fallback trust boundaries.",
+            "Use Chaos Mode to force broader resilience behavior before release.",
+        ],
+        "action_label": "Open Security Controls In Tool",
+        "action_id": "security_toggles",
+    },
+    {
+        "title": "Injection Zone and Payload Workflow",
+        "overview": "Injection Zone defines what code is injected and how it is prepared for runtime execution.",
+        "items": [
+            "Upload file to import existing code directly into the payload editor.",
+            "Injected Code Payload is the final editable content written to generated artifacts.",
+            "Language mapping can auto-adjust target path and command defaults from uploaded extension.",
+            "Use payload editor for quick modifications without leaving SPOOLER.",
+            "Treat payload as the executable experiment unit tied to your scenario profile.",
+        ],
+        "examples": [
+            "Upload a Python patch candidate, tweak logic inline, then build and run.",
+            "Paste a shell validation script for one-off degraded-mode smoke testing.",
+            "Use Node payload with explicit command override for custom runtime invocation.",
+        ],
+        "action_label": "Try Injection Workflow In Tool",
+        "action_id": "injection_zone",
+    },
+    {
+        "title": "IDE Connect (Concept)",
+        "overview": "IDE Connect is roadmap-only in this version and does not pull files yet.",
+        "items": [
+            "Request IDE read permission captures intent but does not execute API integration.",
+            "Use upload or payload paste today for real artifact generation.",
+            "Treat this panel as future workflow context rather than active functionality.",
+        ],
+        "examples": [
+            "Current state: concept marker only, no external IDE read call.",
+            "Near-term practical workflow: export from IDE, then upload into Injection Zone.",
+        ],
+    },
+    {
+        "title": "Build It and Local Spin-Up",
+        "overview": "Build It freezes current state into reproducible artifacts; optional spin-up executes immediately.",
+        "items": [
+            "Build It writes compose recipe, payload artifact, and bootstrap script with timestamped run id.",
+            "Attempt local spin-up now triggers docker compose up -d after artifact generation.",
+            "Disable local spin-up when packaging runs for handoff, review, or deferred execution.",
+            "Even with spin-up off, artifacts remain complete and runnable later.",
+            "Always verify ticker and intent before Build It to avoid stale assumptions.",
+        ],
+        "examples": [
+            "Artifact-only mode for QA handoff: build with spin-up disabled.",
+            "Rapid local validation loop: enable spin-up and inspect generated output status.",
+            "Failure triage: keep run id and artifacts from failing build for replay.",
+        ],
+        "action_label": "Prepare Build Controls In Tool",
+        "action_id": "build_zone",
+    },
+    {
+        "title": "Effective Settings Ticker",
+        "overview": "Ticker is the live serialized truth of your currently effective run configuration.",
+        "items": [
+            "Shows preset, challenge, network, latency, packet loss, CPU, memory, DB, and toggles.",
+            "Updates live as controls change, making it a pre-flight validation surface.",
+            "Use ticker to catch mismatch between intended and actual effective config before build.",
+            "Treat ticker as the final readout before committing Build It.",
+        ],
+        "examples": [
+            "If challenge changed but ticker does not match expectation, adjust controls before building.",
+            "Use ticker in reviews to confirm run context quickly without scanning every control.",
+            "Copy ticker context into release notes for reproducible validation evidence.",
+        ],
+        "action_label": "Review Ticker In Tool",
+        "action_id": "ticker",
+    },
+    {
+        "title": "Guide Overlays",
+        "overview": "Guide overlays explain controls inline and can be toggled without changing run values.",
+        "items": [
+            "Show guides enables explanatory overlays near controls.",
+            "Close all guides and Show guides toggle both only affect overlay visibility.",
+            "Overlay state does not alter scenario configuration by itself.",
+            "Use overlays while learning the tool, then hide for clean production runs.",
+        ],
+        "examples": [
+            "Turn guides on while configuring advanced controls for the first time.",
+            "Turn guides off before screenshot/export to reduce visual noise.",
+            "Toggle overlays during onboarding to explain each control step-by-step.",
+        ],
+        "action_label": "Turn On Guides In Tool",
+        "action_id": "guide_overlays",
+    },
+]
 
 
 def default_target_path_for_language(language: str) -> str:
@@ -413,6 +628,91 @@ def initialize_state() -> None:
     if not st.session_state["preset_initialized"]:
         apply_preset(st.session_state["selected_preset"])
         st.session_state["preset_initialized"] = True
+
+
+def get_query_param_values(name: str) -> list[str]:
+    try:
+        return [str(value) for value in st.query_params.get_all(name)]
+    except Exception:
+        try:
+            legacy_values = st.experimental_get_query_params().get(name, [])
+            return [str(value) for value in legacy_values]
+        except Exception:
+            return []
+
+
+def set_query_param_value(name: str, value: str | None) -> None:
+    try:
+        if value is None:
+            if name in st.query_params:
+                del st.query_params[name]
+        else:
+            st.query_params[name] = value
+    except Exception:
+        params = st.experimental_get_query_params()
+        if value is None:
+            params.pop(name, None)
+        else:
+            params[name] = [value]
+        st.experimental_set_query_params(**params)
+
+
+def get_view_mode() -> str:
+    values = get_query_param_values("view")
+    if not values:
+        return ""
+    return values[-1].strip().lower()
+
+
+def apply_manual_action(action_id: str) -> None:
+    if action_id in {"advanced_controls", "security_toggles", "build_zone"}:
+        st.session_state["advanced_mode"] = True
+    if action_id in {"quick_setup", "challenge_levels", "injection_zone", "ticker"}:
+        st.session_state["advanced_mode"] = False
+    if action_id == "guide_overlays":
+        st.session_state["show_guides"] = True
+        st.session_state["show_guides_toggle"] = True
+
+
+def on_show_guides_toggle_change() -> None:
+    show_guides_enabled = st.session_state.get("show_guides_toggle", False)
+    st.session_state["show_guides"] = bool(show_guides_enabled)
+
+
+def consume_close_guides_request() -> None:
+    def has_truthy_flag(values: list[str]) -> bool:
+        truthy = {"1", "true", "yes", "on"}
+        for value in values:
+            if str(value).strip().lower() in truthy:
+                return True
+        return False
+
+    close_requested = False
+    try:
+        close_requested = has_truthy_flag(st.query_params.get_all("close_guides"))
+    except Exception:
+        try:
+            legacy_values = st.experimental_get_query_params().get("close_guides", [])
+            close_requested = has_truthy_flag(legacy_values)
+        except Exception:
+            close_requested = False
+
+    if not close_requested:
+        return
+
+    st.session_state["show_guides"] = False
+    st.session_state["show_guides_toggle"] = False
+
+    try:
+        if "close_guides" in st.query_params:
+            del st.query_params["close_guides"]
+    except Exception:
+        try:
+            params = st.experimental_get_query_params()
+            params.pop("close_guides", None)
+            st.experimental_set_query_params(**params)
+        except Exception:
+            pass
 
 
 def apply_preset(name: str) -> None:
@@ -493,13 +793,6 @@ def find_background_asset() -> Path | None:
     return None
 
 
-def find_define_banner_asset() -> Path | None:
-    explicit = ASSETS_DIR / "DEFINE.png"
-    if explicit.exists():
-        return explicit
-    return None
-
-
 def apply_theme(background_path: Path | None) -> None:
     bg_css = ""
     if background_path:
@@ -556,7 +849,7 @@ def apply_theme(background_path: Path | None) -> None:
 
         p, label, li, input, textarea {{
             font-family: 'Share Tech Mono', monospace !important;
-            font-size: 1.01rem;
+            font-size: 1.03rem;
         }}
 
         /* Preserve Streamlit icon glyphs so labels don't render as text tokens like "upload" or "arrow_right". */
@@ -580,13 +873,13 @@ def apply_theme(background_path: Path | None) -> None:
         .stFileUploader label,
         .stToggle label {{
             color: #cbffc2 !important;
-            font-size: 0.98rem !important;
+            font-size: 1.03rem !important;
             font-weight: 700 !important;
             letter-spacing: 0.03em;
         }}
 
         .stCaption {{
-            font-size: 0.93rem !important;
+            font-size: 0.97rem !important;
         }}
 
         .stTextInput input,
@@ -645,13 +938,20 @@ def apply_theme(background_path: Path | None) -> None:
             display: none !important;
         }}
 
+        header[data-testid='stHeader'],
+        [data-testid='stToolbar'],
+        [data-testid='stStatusWidget'],
+        [data-testid='stDecoration'] {{
+            display: none !important;
+        }}
+
         [data-testid='collapsedControl'] {{
             display: none !important;
         }}
 
         .block-container {{
-            padding-top: 1.4rem;
-            padding-bottom: 3rem;
+            padding-top: 1.24rem;
+            padding-bottom: 2.9rem;
         }}
 
         .hero-card {{
@@ -670,20 +970,275 @@ def apply_theme(background_path: Path | None) -> None:
             box-shadow: 0 18px 44px rgba(21, 66, 118, 0.42), inset 0 1px 0 rgba(244, 251, 255, 0.2);
         }}
 
+        .spooler-top-meta h3 {{
+            margin-top: 0.02rem !important;
+            margin-bottom: 0.2rem !important;
+            font-size: clamp(1.22rem, 2.02vw, 1.74rem) !important;
+            letter-spacing: 0.055em !important;
+            line-height: 1.04 !important;
+            white-space: nowrap;
+        }}
+
+        .spooler-top-meta .stCaption {{
+            margin-top: 0 !important;
+            margin-bottom: 0.1rem !important;
+        }}
+
+        .hero-content-width {{
+            width: min(56vw, 860px);
+            max-width: 100%;
+        }}
+
+        .st-key-close_guides_button,
+        [class*="st-key-close_guides_button"] {{
+            position: fixed;
+            top: 4.05rem;
+            right: 0.95rem;
+            z-index: 1405;
+            margin: 0 !important;
+        }}
+
+        .st-key-close_guides_button .stButton,
+        [class*="st-key-close_guides_button"] .stButton {{
+            margin: 0 !important;
+        }}
+
+        .st-key-close_guides_button .stButton > button,
+        [class*="st-key-close_guides_button"] .stButton > button {{
+            width: auto;
+            color: #041b0b !important;
+            font-family: 'Orbitron', 'Share Tech Mono', monospace;
+            font-size: 0.64rem;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            border: 1px solid rgba(211, 255, 192, 0.95) !important;
+            border-radius: 8px;
+            padding: 0.3rem 0.56rem;
+            white-space: nowrap;
+            min-height: 1.5rem !important;
+            background: linear-gradient(120deg, #8bff6e, #c7ff98) !important;
+            box-shadow: 0 0 14px rgba(126, 255, 94, 0.42), 0 8px 18px rgba(17, 55, 35, 0.34) !important;
+        }}
+
+        .st-key-close_guides_button .stButton > button:hover,
+        [class*="st-key-close_guides_button"] .stButton > button:hover {{
+            color: #021407 !important;
+            border-color: rgba(225, 255, 211, 1) !important;
+            background: linear-gradient(120deg, #a4ff84, #ddffb4) !important;
+        }}
+
+        @media (max-width: 840px) {{
+            .st-key-close_guides_button,
+            [class*="st-key-close_guides_button"] {{
+                top: 3.75rem;
+                right: 0.6rem;
+            }}
+        }}
+
+        .st-key-open_manual_button,
+        [class*="st-key-open_manual_button"] {{
+            margin-top: 1.02rem;
+        }}
+
+        .st-key-open_manual_button .stButton > button,
+        [class*="st-key-open_manual_button"] .stButton > button {{
+            color: #9eff7d !important;
+            border: 2px solid rgba(170, 255, 140, 0.96) !important;
+            background: #050b08 !important;
+            box-shadow: 0 0 14px rgba(127, 255, 94, 0.4), inset 0 0 8px rgba(127, 255, 94, 0.15) !important;
+            font-size: 0.54rem !important;
+            letter-spacing: 0.03em !important;
+            padding: 0.22rem 0.56rem !important;
+            min-height: 1.32rem !important;
+            line-height: 1 !important;
+            border-radius: 6px !important;
+            white-space: nowrap !important;
+        }}
+
+        .manual-return-button .stButton > button {{
+            color: #a5ff87 !important;
+            border: 1px solid rgba(165, 255, 135, 0.64) !important;
+            background: rgba(10, 24, 16, 0.7) !important;
+            box-shadow: 0 8px 18px rgba(20, 56, 36, 0.34) !important;
+        }}
+
+        .st-key-open_manual_button .stButton > button:hover,
+        [class*="st-key-open_manual_button"] .stButton > button:hover {{
+            color: #d8ffca !important;
+            border-color: rgba(221, 255, 199, 1) !important;
+            background: #08150f !important;
+        }}
+
+        .manual-return-button .stButton > button:hover {{
+            color: #cdffbf !important;
+            border-color: rgba(205, 255, 191, 0.86) !important;
+            background: rgba(13, 32, 20, 0.78) !important;
+        }}
+
+        .manual-shell {{
+            border: 1px solid rgba(160, 220, 255, 0.4);
+            border-radius: 16px;
+            padding: 14px 18px;
+            background: linear-gradient(150deg, rgba(10, 21, 37, 0.84), rgba(8, 16, 28, 0.74));
+            backdrop-filter: blur(10px) saturate(125%);
+            box-shadow: 0 18px 42px rgba(16, 47, 84, 0.34);
+            margin-bottom: 12px;
+        }}
+
+        .manual-header-title {{
+            font-family: 'Orbitron', 'Share Tech Mono', monospace;
+            color: #a5ff87;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            font-size: clamp(1.34rem, 2.6vw, 2.2rem);
+            text-shadow: 0 0 12px rgba(114, 255, 83, 0.56);
+            margin-bottom: 4px;
+        }}
+
+        .manual-header-subtitle {{
+            color: #ffffff;
+            font-size: 0.92rem;
+            line-height: 1.5;
+            margin-bottom: 12px;
+            max-width: min(980px, 100%);
+        }}
+
+        .manual-controls {{
+            border: 1px solid rgba(162, 216, 255, 0.36);
+            border-radius: 12px;
+            background: rgba(8, 17, 30, 0.78);
+            padding: 10px 12px 6px;
+            margin-bottom: 12px;
+        }}
+
+        .manual-section {{
+            border: 1px solid rgba(137, 203, 255, 0.32);
+            border-radius: 12px;
+            background: rgba(7, 15, 26, 0.8);
+            padding: 11px 13px 10px;
+            margin-bottom: 10px;
+        }}
+
+        .manual-section-title {{
+            font-family: 'Orbitron', 'Share Tech Mono', monospace;
+            color: #9eff7d;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            font-size: 0.93rem;
+            text-shadow: 0 0 10px rgba(114, 255, 83, 0.44);
+            margin-bottom: 6px;
+        }}
+
+        .manual-section-overview {{
+            color: #ffffff;
+            font-size: 0.86rem;
+            line-height: 1.52;
+            margin-bottom: 8px;
+        }}
+
+        .manual-subhead {{
+            font-family: 'Orbitron', 'Share Tech Mono', monospace;
+            color: #a6ff88;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            font-size: 0.72rem;
+            margin: 8px 0 4px;
+        }}
+
+        .manual-section ul {{
+            margin: 0;
+            padding-left: 20px;
+        }}
+
+        .manual-section li {{
+            color: #ffffff;
+            font-size: 0.84rem;
+            line-height: 1.48;
+            margin-bottom: 5px;
+        }}
+
+        .manual-example-list li {{
+            color: #d8ffcd;
+        }}
+
+        .manual-action-button .stButton {{
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 6px;
+            margin-bottom: 12px;
+        }}
+
+        .manual-action-button .stButton > button {{
+            color: #a5ff87 !important;
+            border: 1px solid rgba(169, 255, 141, 0.78) !important;
+            background: rgba(10, 25, 16, 0.76) !important;
+            box-shadow: 0 0 12px rgba(116, 255, 86, 0.2), 0 7px 16px rgba(15, 44, 29, 0.3) !important;
+            font-size: 0.66rem !important;
+            letter-spacing: 0.05em !important;
+            padding: 0.28rem 0.62rem !important;
+            min-height: 1.45rem !important;
+        }}
+
+        .manual-action-button .stButton > button:hover {{
+            color: #d4ffc2 !important;
+            border-color: rgba(210, 255, 196, 0.94) !important;
+            background: rgba(13, 32, 21, 0.84) !important;
+        }}
+
+        .manual-empty {{
+            border: 1px solid rgba(148, 203, 255, 0.38);
+            border-radius: 10px;
+            background: rgba(9, 19, 33, 0.82);
+            color: #ffffff;
+            padding: 10px 12px;
+            font-size: 0.84rem;
+            margin-top: 4px;
+        }}
+
         .section-label {{
             font-family: 'Orbitron', 'Share Tech Mono', monospace;
             color: #a5ff87;
             letter-spacing: 0.08em;
-            font-size: 1.1rem;
-            margin-top: 8px;
+            font-size: 1.18rem;
+            font-weight: 700;
+            margin-top: 9px;
             margin-bottom: 8px;
             text-transform: uppercase;
             text-shadow: 0 0 14px rgba(130, 255, 103, 0.48);
         }}
 
+        .preset-ai-lens {{
+            margin-top: 6px;
+            margin-bottom: 4px;
+            padding: 7px 10px 8px;
+            border: 1px solid rgba(160, 213, 255, 0.38);
+            border-left: 3px solid rgba(143, 255, 112, 0.9);
+            border-radius: 10px;
+            background: linear-gradient(120deg, rgba(10, 23, 39, 0.86), rgba(8, 17, 30, 0.76));
+            min-height: 2.45rem;
+            box-shadow: inset 0 0 0 1px rgba(108, 170, 238, 0.08);
+        }}
+
+        .preset-ai-lens-label {{
+            font-family: 'Orbitron', 'Share Tech Mono', monospace;
+            color: #a5ff87;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            font-size: 0.62rem;
+            line-height: 1.1;
+            margin-bottom: 3px;
+            text-shadow: 0 0 10px rgba(130, 255, 103, 0.34);
+        }}
+
+        .preset-ai-lens-text {{
+            color: #ffffff;
+            font-size: 0.76rem;
+            line-height: 1.34;
+        }}
+
         .preset-ticker-shell {{
             position: relative;
-            margin-top: 4px;
+            margin-top: 3px;
             margin-bottom: 12px;
         }}
 
@@ -707,8 +1262,8 @@ def apply_theme(background_path: Path | None) -> None:
 
         .preset-ticker-lane {{
             position: absolute;
-            left: 10.85%;
-            right: 0.95%;
+            left: calc(4.45% - 10px);
+            right: 3.45%;
             top: 33.2%;
             height: 34.2%;
             overflow: hidden;
@@ -730,70 +1285,138 @@ def apply_theme(background_path: Path | None) -> None:
             animation: spooler-marquee 76s linear infinite;
         }}
 
-        .define-banner-wrap {{
-            width: min(100%, 820px);
-            margin: 2px 0 8px auto;
-            filter: drop-shadow(0 12px 24px rgba(40, 102, 169, 0.28));
+        .define-title-wrap {{
+            position: relative;
+            display: inline-block;
+            margin-bottom: 4px;
         }}
 
-        textarea[aria-label="Environment Prompt"] {{
+        .define-title-glow {{
+            position: absolute;
+            left: 0;
+            top: 0;
+            color: rgba(118, 255, 103, 0.38);
+            filter: blur(3px);
+            transform: translate(0, 1px);
+            pointer-events: none;
+        }}
+
+        .define-title-main {{
+            position: relative;
+            color: #a5ff87;
+            text-shadow: 0 0 9px rgba(130, 255, 103, 0.62), 0 0 16px rgba(111, 255, 90, 0.32);
+        }}
+
+        .define-title-main,
+        .define-title-glow {{
+            font-family: 'Orbitron', 'Share Tech Mono', monospace;
+            font-size: clamp(1.78rem, 3.65vw, 3.15rem);
+            line-height: 0.98;
+            letter-spacing: 0.07em;
+            text-transform: uppercase;
+            font-weight: 700;
+            white-space: normal;
+        }}
+
+        .define-subline {{
+            color: #ffffff;
+            font-size: 0.98rem;
+            line-height: 1.4;
+            margin-bottom: 8px;
+            letter-spacing: 0.012em;
+        }}
+
+        textarea[aria-label="Environment Prompt"],
+        input[aria-label="Environment Prompt"] {{
             background: rgba(255, 255, 255, 0.96) !important;
             color: #0b1b2a !important;
             border: 1px solid rgba(187, 220, 255, 0.85) !important;
-            border-radius: 12px !important;
+            border-radius: 10px !important;
             box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 8px 20px rgba(43, 104, 173, 0.16);
             font-family: 'Share Tech Mono', monospace !important;
+            min-height: 2.15rem !important;
+            padding-top: 0.25rem !important;
+            padding-bottom: 0.25rem !important;
         }}
 
-        textarea[aria-label="Environment Prompt"]::placeholder {{
+        textarea[aria-label="Environment Prompt"]::placeholder,
+        input[aria-label="Environment Prompt"]::placeholder {{
             color: rgba(16, 36, 58, 0.58) !important;
         }}
 
-        .preset-ticker-shell:hover .preset-ticker-track {{
+        .ticker-hover-intent {{
+            position: absolute;
+            inset: 0;
+            z-index: 4;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: auto;
+            background: transparent;
+            transition: visibility 0s linear 650ms;
+        }}
+
+        .preset-ticker-shell:hover .ticker-hover-intent,
+        .preset-ticker-shell:focus-within .ticker-hover-intent {{
+            visibility: visible;
+        }}
+
+        .ticker-hover-intent:hover ~ .preset-ticker-viewport .preset-ticker-track,
+        .settings-popover:hover ~ .preset-ticker-viewport .preset-ticker-track {{
             animation-play-state: paused;
+        }}
+
+        .preset-ticker-shell.ticker-disabled .ticker-hover-intent {{
+            display: none;
+        }}
+
+        .preset-ticker-shell.ticker-disabled .settings-popover {{
+            opacity: 0 !important;
+            visibility: hidden !important;
+            pointer-events: none !important;
+            transform: translate(-50%, 6px) scale(0.985) !important;
+        }}
+
+        .preset-ticker-shell.ticker-disabled .preset-ticker-track {{
+            animation-play-state: running !important;
         }}
 
         .settings-popover {{
             position: absolute;
-            top: calc(100% + 12px);
             left: 50%;
-            transform: translate(-50%, 8px);
-            width: min(820px, 96vw);
-            border: 1px solid rgba(179, 219, 255, 0.72);
+            bottom: calc(100% + 10px);
+            transform: translate(-50%, 6px) scale(0.985);
+            width: min(820px, 100%);
+            margin: 0;
+            border: 1px solid rgba(130, 255, 103, 0.56);
             border-radius: 14px;
             background: linear-gradient(140deg, rgba(7, 16, 30, 0.9), rgba(8, 20, 36, 0.82));
             backdrop-filter: blur(14px) saturate(140%);
-            box-shadow: 0 18px 38px rgba(18, 49, 88, 0.48), 0 0 18px rgba(146, 204, 255, 0.2);
+            box-shadow: 0 14px 30px rgba(18, 49, 88, 0.44), 0 0 15px rgba(130, 255, 103, 0.2);
             padding: 12px 14px;
+            z-index: 3;
             opacity: 0;
             visibility: hidden;
             pointer-events: none;
-            z-index: 25;
-            transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s ease;
+            transition: opacity 0.16s ease, transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, visibility 0s linear 0.16s;
         }}
 
         .settings-popover::before {{
-            content: "";
-            position: absolute;
-            top: -7px;
-            left: calc(50% - 7px);
-            width: 14px;
-            height: 14px;
-            background: rgba(9, 19, 34, 0.95);
-            border-top: 1px solid rgba(179, 219, 255, 0.72);
-            border-left: 1px solid rgba(179, 219, 255, 0.72);
-            transform: rotate(45deg);
+            content: none;
         }}
 
-        .preset-ticker-shell:hover .settings-popover {{
+        .ticker-hover-intent:hover + .settings-popover,
+        .settings-popover:hover,
+        .preset-ticker-shell:focus-within .settings-popover {{
             opacity: 1;
             visibility: visible;
             pointer-events: auto;
-            transform: translate(-50%, 0);
+            transform: translate(-50%, 0) scale(1);
+            border-color: rgba(144, 255, 123, 0.68);
+            box-shadow: 0 16px 34px rgba(17, 48, 83, 0.45), 0 0 20px rgba(130, 255, 103, 0.28);
         }}
 
         .settings-popover-title {{
-            color: #f5fbff;
+            color: #a5ff87;
             font-family: 'Orbitron', 'Share Tech Mono', monospace;
             font-size: 0.82rem;
             letter-spacing: 0.08em;
@@ -812,12 +1435,12 @@ def apply_theme(background_path: Path | None) -> None:
             align-items: flex-start;
             justify-content: space-between;
             gap: 10px;
-            border-bottom: 1px dashed rgba(153, 201, 248, 0.2);
+            border-bottom: 1px dashed rgba(130, 255, 103, 0.26);
             padding-bottom: 4px;
         }}
 
         .settings-popover-key {{
-            color: #d9ecff;
+            color: #a5ff87;
             font-size: 0.76rem;
             letter-spacing: 0.04em;
             text-transform: uppercase;
@@ -834,8 +1457,12 @@ def apply_theme(background_path: Path | None) -> None:
         }}
 
         @media (max-width: 840px) {{
+            .hero-content-width {{
+                width: 100%;
+            }}
+
             .settings-popover {{
-                width: min(640px, 96vw);
+                width: 100%;
             }}
 
             .settings-popover-grid {{
@@ -845,26 +1472,67 @@ def apply_theme(background_path: Path | None) -> None:
             .settings-popover-value {{
                 max-width: 70%;
             }}
+
+            .guide-drawer {{
+                width: calc(100% - 24px);
+                min-width: 0;
+                max-width: calc(100% - 24px);
+            }}
+        }}
+
+        .advanced-controls-shell {{
+            margin-top: 8px;
+            margin-bottom: 10px;
         }}
 
         .guide-anchor-row {{
             display: flex;
             align-items: flex-start;
             gap: 8px;
-            margin-top: 6px;
-            margin-bottom: 4px;
+            margin-top: 4px;
+            margin-bottom: 3px;
         }}
 
         .guide-line {{
-            color: #9fd6ff;
-            text-shadow: 0 0 10px rgba(120, 180, 255, 0.4);
-            font-family: 'Orbitron', 'Share Tech Mono', monospace;
-            font-size: 0.8rem;
-            line-height: 1.2;
+            width: 16px;
+            min-width: 16px;
+            min-height: 42px;
+            display: flex;
+            align-items: stretch;
+            justify-content: center;
+            margin-top: 0;
+            pointer-events: none;
+        }}
+
+        .guide-line-stem {{
+            display: block;
+            position: relative;
+            width: 2px;
+            min-height: 42px;
+            border-radius: 999px;
+            background: linear-gradient(
+                180deg,
+                rgba(237, 246, 255, 0.9),
+                rgba(186, 219, 255, 0.78)
+            );
+            filter: drop-shadow(0 0 8px rgba(200, 230, 255, 0.34));
+            transform: none;
+        }}
+
+        .guide-line-stem::after {{
+            content: "";
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            width: 16px;
+            height: 2px;
+            border-radius: 999px;
+            background: rgba(225, 239, 255, 0.9);
         }}
 
         .guide-brief-wrap {{
             display: block;
+            max-width: min(760px, 100%);
         }}
 
         .guide-anchor-title {{
@@ -881,46 +1549,21 @@ def apply_theme(background_path: Path | None) -> None:
             line-height: 1.35;
         }}
 
-        details.guide-drawer {{
-            margin: 0 0 10px 18px;
+        .guide-drawer {{
+            margin: 0 0 10px 24px;
             border: 1px solid rgba(144, 194, 255, 0.45);
             border-radius: 8px;
             background: rgba(8, 15, 28, 0.78);
             overflow: hidden;
-            transition: border-color 0.2s ease, box-shadow 0.2s ease;
-        }}
-
-        details.guide-drawer[open] {{
-            border-color: rgba(170, 212, 255, 0.88);
-            box-shadow: 0 0 16px rgba(111, 171, 255, 0.25);
-        }}
-
-        details.guide-drawer summary {{
-            list-style: none;
-            cursor: pointer;
-            padding: 8px 10px;
-            color: #e9f4ff;
-            font-size: 0.75rem;
-            letter-spacing: 0.06em;
-            text-transform: uppercase;
-        }}
-
-        details.guide-drawer summary::-webkit-details-marker {{
-            display: none;
-        }}
-
-        details.guide-drawer summary::after {{
-            content: " [+]";
-            color: #beddff;
-        }}
-
-        details.guide-drawer[open] summary::after {{
-            content: " [-]";
+            position: relative;
+            z-index: 1301;
+            width: min(760px, calc(100% - 24px));
+            min-width: min(420px, calc(100% - 24px));
+            max-width: calc(100% - 24px);
         }}
 
         .guide-drawer-body {{
-            border-top: 1px solid rgba(145, 198, 255, 0.28);
-            padding: 8px 12px 10px;
+            padding: 8px 10px 10px;
         }}
 
         .guide-drawer-body p {{
@@ -936,7 +1579,7 @@ def apply_theme(background_path: Path | None) -> None:
 
         @keyframes spooler-marquee {{
             0% {{ transform: translateX(0%); }}
-            100% {{ transform: translateX(-100%); }}
+            100% {{ transform: translateX(calc(-100% - 360px)); }}
         }}
         </style>
         """,
@@ -1103,8 +1746,13 @@ def build_effective_settings_rows() -> list[tuple[str, str]]:
 
 
 def render_preset_ticker() -> None:
+    ticker_disabled = st.session_state.get("show_guides", False)
+    ticker_reset_key = st.session_state.get("ticker_reset_key", 0)
+    shell_class = "preset-ticker-shell ticker-disabled" if ticker_disabled else "preset-ticker-shell"
+
     summary = escape(build_effective_settings_line())
-    marquee_text = f"{summary}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{summary}"
+    ticker_gap = "&nbsp;" * 28
+    marquee_text = f"{summary}{ticker_gap}{summary}"
     popover_rows = "".join(
         (
             '<div class="settings-popover-row">'
@@ -1116,15 +1764,16 @@ def render_preset_ticker() -> None:
     )
     st.markdown(
         (
-            '<div class="preset-ticker-shell">'
+            f'<div class="{shell_class}" data-ticker-reset="{ticker_reset_key}">'
+            '<div class="ticker-hover-intent" aria-hidden="true"></div>'
+            '<div class="settings-popover">'
+            '<div class="settings-popover-title">Active Environment Profile</div>'
+            f'<div class="settings-popover-grid">{popover_rows}</div>'
+            "</div>"
             '<div class="preset-ticker-viewport">'
             '<div class="preset-ticker-lane">'
             f'<div class="preset-ticker-track">{marquee_text}</div>'
             "</div>"
-            "</div>"
-            '<div class="settings-popover">'
-            '<div class="settings-popover-title">Active Environment Profile</div>'
-            f'<div class="settings-popover-grid">{popover_rows}</div>'
             "</div>"
             "</div>"
         ),
@@ -1134,22 +1783,112 @@ def render_preset_ticker() -> None:
 
 def render_guide(anchor_label: str, brief: str, details: list[str]) -> None:
     detail_blocks = "".join(f"<p>{escape(line)}</p>" for line in details)
+    guide_line_markup = '<div class="guide-line"><span class="guide-line-stem"></span></div>'
+
     st.markdown(
         (
             '<div class="guide-anchor-row">'
-            '<div class="guide-line">└─</div>'
+            f"{guide_line_markup}"
             '<div class="guide-brief-wrap">'
             f'<div class="guide-anchor-title">{escape(anchor_label)}</div>'
             f'<div class="guide-brief-text">{escape(brief)}</div>'
             "</div>"
             "</div>"
-            '<details class="guide-drawer">'
-            "<summary>Expand guide</summary>"
+            '<div class="guide-drawer">'
             f'<div class="guide-drawer-body">{detail_blocks}</div>'
-            "</details>"
+            "</div>"
         ),
         unsafe_allow_html=True,
     )
+
+
+def render_preset_ai_lens() -> None:
+    preset_name = st.session_state.get("selected_preset", "")
+    lens_text = PRESET_AI_SECURITY_LENS.get(
+        preset_name,
+        "Maps the selected scenario to AI-security-relevant failure pressure before build.",
+    )
+    st.markdown(
+        (
+            '<div class="preset-ai-lens">'
+            '<div class="preset-ai-lens-label">AI Security Lens</div>'
+            f'<div class="preset-ai-lens-text">{escape(lens_text)}</div>'
+            "</div>"
+        ),
+        unsafe_allow_html=True,
+    )
+
+
+def render_manual_page() -> None:
+    st.markdown('<div class="manual-shell">', unsafe_allow_html=True)
+    header_left, header_right = st.columns([6, 1.25])
+    with header_left:
+        st.markdown('<div class="manual-header-title">SPOOLER Field Guide</div>', unsafe_allow_html=True)
+        st.markdown(
+            (
+                '<div class="manual-header-subtitle">'
+                "Deep operator reference for every major control in SPOOLER: what it does, when to use it, "
+                "example scenarios, and practical action paths back into the tool."
+                "</div>"
+            ),
+            unsafe_allow_html=True,
+        )
+    with header_right:
+        st.markdown('<div class="manual-return-button">', unsafe_allow_html=True)
+        if st.button("Return to SPOOLER", key="manual_return_button"):
+            set_query_param_value("view", None)
+            st.rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown('<div class="manual-controls">', unsafe_allow_html=True)
+    jump_options = ["All sections"] + [section["title"] for section in MANUAL_SECTIONS]
+    selected_section = st.selectbox(
+        "Jump to section",
+        jump_options,
+        key="manual_jump_section",
+        help="Jump directly to a feature chapter in the field guide.",
+    )
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    visible_sections = []
+    for section in MANUAL_SECTIONS:
+        if selected_section != "All sections" and section["title"] != selected_section:
+            continue
+        visible_sections.append(section)
+
+    for idx, section in enumerate(visible_sections):
+        bullets = "".join(f"<li>{escape(item)}</li>" for item in section["items"])
+        examples = section.get("examples", [])
+        example_markup = ""
+        if examples:
+            example_bullets = "".join(f"<li>{escape(example)}</li>" for example in examples)
+            example_markup = (
+                '<div class="manual-subhead">Example Scenarios</div>'
+                f'<ul class="manual-example-list">{example_bullets}</ul>'
+            )
+        st.markdown(
+            (
+                '<div class="manual-section">'
+                f'<div class="manual-section-title">{escape(section["title"])}</div>'
+                f'<div class="manual-section-overview">{escape(section.get("overview", ""))}</div>'
+                '<div class="manual-subhead">Playbook</div>'
+                f"<ul>{bullets}</ul>"
+                f"{example_markup}"
+                "</div>"
+            ),
+            unsafe_allow_html=True,
+        )
+        action_label = section.get("action_label")
+        action_id = section.get("action_id")
+        if action_label and action_id:
+            st.markdown('<div class="manual-action-button">', unsafe_allow_html=True)
+            if st.button(str(action_label), key=f"manual_action_{idx}_{action_id}"):
+                apply_manual_action(str(action_id))
+                set_query_param_value("view", None)
+                st.rerun()
+            st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 def maybe_render_guide(anchor_label: str, brief: str, details: list[str]) -> None:
@@ -1334,37 +2073,59 @@ def render_advanced_controls() -> None:
 
 st.set_page_config(page_title="SPOOLER | Environment Builder", page_icon="⚡", layout="wide")
 initialize_state()
+consume_close_guides_request()
 apply_theme(find_background_asset())
 
+if get_view_mode() == "manual":
+    render_manual_page()
+    st.stop()
+
 logo_path = ASSETS_DIR / "Spooler_logo.png"
-top_logo_col, top_meta_col = st.columns([1, 3])
+top_logo_col, top_meta_col, top_help_col = st.columns([1, 3.05, 0.55])
 with top_logo_col:
     if logo_path.exists():
         st.image(str(logo_path), width="stretch")
 with top_meta_col:
-    st.markdown("### SPOOLER // Adaptive Environment Forge")
+    st.markdown('<div class="spooler-top-meta">', unsafe_allow_html=True)
+    st.markdown("### SPOOLER // Deterministic Failure Testing")
     st.caption("v1.4.0 · streamlined quick setup with optional deep control")
+    st.markdown("</div>", unsafe_allow_html=True)
+with top_help_col:
+    if st.button("Playbook", key="open_manual_button"):
+        set_query_param_value("view", "manual")
+        st.rerun()
+
+if st.session_state["show_guides"]:
+    if st.button("Close Guides", key="close_guides_button"):
+        st.session_state["show_guides"] = False
+        st.session_state["show_guides_toggle"] = False
 
 st.markdown('<div class="hero-card">', unsafe_allow_html=True)
-define_banner_path = find_define_banner_asset()
-if define_banner_path:
-    _, banner_col = st.columns([1, 2])
-    with banner_col:
-        st.markdown('<div class="define-banner-wrap">', unsafe_allow_html=True)
-        st.image(str(define_banner_path), width="stretch")
-        st.markdown("</div>", unsafe_allow_html=True)
-else:
-    st.title("Define Your Runtime Scenario")
-    st.caption("Describe a custom-tailored scenario or use presets, then choose a challenge level and build.")
+st.markdown('<div class="hero-content-width">', unsafe_allow_html=True)
+st.markdown(
+    (
+        '<div class="define-title-wrap">'
+        '<div class="define-title-glow">Define Your Runtime Scenario</div>'
+        '<div class="define-title-main">Define Your Runtime Scenario</div>'
+        "</div>"
+    ),
+    unsafe_allow_html=True,
+)
+st.markdown(
+    (
+        '<div class="define-subline">'
+        "Start with a custom scenario description or choose a preset, set the challenge level, and build. "
+        "Advanced mode provides complete configuration control."
+        "</div>"
+    ),
+    unsafe_allow_html=True,
+)
 
-prompt_left_col, prompt_center_col, prompt_right_col = st.columns([0.08, 0.84, 0.08])
-with prompt_center_col:
-    st.text_area(
-        "Environment Prompt",
-        key="quick_prompt",
-        placeholder="Example: validate generated patch behavior under high latency, packet loss, and auth edge-case pressure.",
-        height=66,
-    )
+st.text_input(
+    "Environment Prompt",
+    key="quick_prompt",
+    placeholder="Example: validate generated patch behavior under high latency, packet loss, and auth edge-case pressure.",
+)
 maybe_render_guide(
     "Environment Prompt",
     "Describe the outcome you want in plain language.",
@@ -1373,6 +2134,7 @@ maybe_render_guide(
         "If both prompt and advanced intent are set, the prompt is used as the primary intent value. If prompt is empty, SPOOLER falls back to advanced intent and then preset name, so every package still has a meaningful objective label.",
     ],
 )
+st.markdown("</div>", unsafe_allow_html=True)
 st.markdown("</div>", unsafe_allow_html=True)
 
 st.markdown('<div class="section-label">Quick Setup (Simple Mode)</div>', unsafe_allow_html=True)
@@ -1384,6 +2146,7 @@ with setup_col_1:
         key="selected_preset",
         on_change=on_preset_change,
     )
+    render_preset_ai_lens()
     maybe_render_guide(
         "Preset Scenario",
         "Loads a full baseline profile for environment settings and payload defaults.",
@@ -1419,7 +2182,24 @@ with setup_col_3:
         ],
     )
 with setup_col_4:
-    st.toggle("Show guides", key="show_guides")
+    st.session_state["show_guides_toggle"] = bool(st.session_state.get("show_guides", False))
+    st.toggle("Show guides", key="show_guides_toggle", on_change=on_show_guides_toggle_change)
+
+if st.session_state["advanced_mode"]:
+    st.markdown('<div class="advanced-controls-shell">', unsafe_allow_html=True)
+    render_advanced_controls()
+    st.checkbox("Attempt local spin-up now (docker compose up -d)", key="spin_now")
+    maybe_render_guide(
+        "Local Spin-Up",
+        "Immediately attempts docker compose start after artifact generation.",
+        [
+            "Enable this when you want SPOOLER to execute compose startup right after writing artifacts. It shortens feedback time for end-to-end checks.",
+            "Disable it when you are generating packages for handoff, versioning, or later execution in another environment.",
+        ],
+    )
+    st.markdown("</div>", unsafe_allow_html=True)
+else:
+    st.session_state["spin_now"] = False
 
 st.caption(f"Challenge note: {DIFFICULTY_DETAILS[st.session_state['difficulty_profile']]}")
 render_preset_ticker()
@@ -1468,19 +2248,6 @@ maybe_render_guide(
     ],
 )
 
-if st.session_state["advanced_mode"]:
-    st.checkbox("Attempt local spin-up now (docker compose up -d)", key="spin_now")
-    maybe_render_guide(
-        "Local Spin-Up",
-        "Immediately attempts docker compose start after artifact generation.",
-        [
-            "Enable this when you want SPOOLER to execute compose startup right after writing artifacts. It shortens feedback time for end-to-end checks.",
-            "Disable it when you are generating packages for handoff, versioning, or later execution in another environment.",
-        ],
-    )
-else:
-    st.session_state["spin_now"] = False
-
 with st.expander("IDE Connect (Concept)"):
     st.write(
         "Future workflow concept: connect your IDE and request read-only project access so SPOOLER can pull the "
@@ -1499,9 +2266,6 @@ with st.expander("IDE Connect (Concept)"):
             "Current behavior records intent only and does not call external IDE APIs. It remains intentionally non-operational in this version.",
         ],
     )
-
-if st.session_state["advanced_mode"]:
-    render_advanced_controls()
 
 maybe_render_guide(
     "Build It",

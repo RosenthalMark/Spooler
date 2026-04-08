@@ -265,26 +265,38 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 2. Run App
+### 2. Build Target Agent Image (Required for Local Spin-Up)
+
+```bash
+./scripts/build-target-agent-image.sh
+```
+
+Alternative command:
+
+```bash
+docker build -t spooler/target-agent:latest -f docker/target-agent/Dockerfile .
+```
+
+### 3. Run App
 
 ```bash
 streamlit run app.py
 ```
 
-### 3. Build a Recipe
+### 4. Build a Recipe
 
 - choose preset
 - choose challenge level
 - upload or paste payload
 - click **Build It**
 
-### 4. Start Generated Environment (Optional)
+### 5. Start Generated Environment (Optional)
 
 ```bash
 docker compose -f recipes/spool-<timestamp>.yml up -d --remove-orphans
 ```
 
-### 5. Tear Down
+### 6. Tear Down
 
 ```bash
 docker compose -f recipes/spool-<timestamp>.yml down -v
