@@ -1,209 +1,162 @@
 # SPOOLER
 
-## Ephemeral Environment Orchestrator for Generated Code
+Local-first hostile-environment runner for generated code.
 
-### Fast, reproducible, hostile environment packaging for QA workflows
+SPOOLER turns a scenario config + probe payload into reproducible Docker artifacts, applies real runtime pressure (CPU/memory limits, netem latency/loss, fault/outage behavior), and surfaces pass/fail + logs in both the app and CI.
 
----
+## What SPOOLER Is Now
 
-## GitHub Repository Description (Copy/Paste)
+SPOOLER is a practical local test harness that lets you define a hostile scenario, build/run it reproducibly, and inspect results afterward. It now includes real resource/network enforcement, runtime contract interpretation, dependency fault simulation, reusable probes, scenario import/export, CI execution, internal module registration, and persisted run history.
 
-Build hostile, reproducible test environments for generated code in under a minute using presets, challenge levels, and injectable payload files.
+## Current Capability Snapshot
 
----
+- Preset + challenge-based scenario builder in Streamlit
+- Local target image build script: `./scripts/build-target-agent-image.sh`
+- Deterministic compose + injection artifact generation
+- Absolute injection mount paths in generated compose for path correctness
+- Local spin-up result visibility: compose output, container state, logs, run command, run/container id
+- Runtime contract interpreter in target image (`runtime_controller.py`)
+- Real Docker resource constraints in compose:
+  - `cpus`
+  - `mem_limit`
+- Real Linux `tc/netem` shaping in container bootstrap (`apply_netem.sh`)
+- Third-party outage simulation service (`docker/third-party-sim/server.py`)
+- Reusable probe templates and example payloads
+- IDE Connect local read-only file ingestion (workspace path based)
+- Scenario export/import (JSON)
+- Noninteractive CI execution mode (`scripts/ci_run.py`) + example GitHub workflow
+- Internal plugin-style module registration for scenarios/faults (`spooler_modules/`)
+- Persistent run history (`logs/run_history.jsonl`) + in-app Run Results & History view
 
-## Executive Summary
+## Prerequisites
 
-SPOOLER is a Streamlit-based environment builder that creates a reproducible Docker Compose recipe plus injection artifacts from a lightweight UI.
+- Docker Engine + Docker Compose plugin
+- Python 3.10+
+- macOS/Linux shell environment
 
-It is designed for a practical pain point: teams can generate code quickly, but validating that code under realistic, failure-prone conditions is usually slow, inconsistent, and hard to reproduce.
+## Quick Start (App)
 
-SPOOLER compresses that loop.
+1. Create env and install dependencies:
 
-Choose a scenario, choose a challenge level, drop in a payload, click **Build It**, and get a deterministic environment package you can run immediately or hand off to someone else.
+```bash
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
 
----
+2. Build target image:
 
-## Why This Exists
+```bash
+./scripts/build-target-agent-image.sh
+```
 
-### The Team Pain Point This Targets
+3. Start app:
 
-The underlying workflow problem is not writing code.
+```bash
+streamlit run app.py
+```
 
-The problem is validating behavior under stress conditions that often break real systems:
+4. In the UI:
 
-- high latency
-- packet loss
-- tight resource budgets
-- dependency outages
-- auth edge cases
-- vulnerable feature flags and security toggles
+- pick a preset/challenge
+- upload/paste payload (or use IDE Connect path ingest)
+- click **Build It**
+- optionally enable local spin-up
+- review generated artifacts and Run Results/History
 
-In fast-moving teams, this usually becomes ad hoc testing.
+## Show-It-Off Script (Fast Demo)
 
-Ad hoc testing means:
+Run one scripted noninteractive demo locally:
 
-- inconsistent reproduction
-- weak confidence in fixes
-- slow triage after regressions
+```bash
+./scripts/showcase_run.sh
+```
 
-SPOOLER turns that into an explicit, reusable package.
+Optional arguments:
 
-## What SPOOLER Produces
+```bash
+./scripts/showcase_run.sh <run-id> <artifact-dir>
+```
 
-Every build generates:
+Example:
 
-- `recipes/spool-<timestamp>.yml`
-- `injections/spool-<timestamp>/payload.<ext>`
-- `injections/spool-<timestamp>/bootstrap.sh`
+```bash
+./scripts/showcase_run.sh spool-showcase logs/showcase
+```
 
-These files are sufficient to recreate the same scenario consistently.
+This script:
 
----
+- builds `spooler/target-agent:latest`
+- runs a deterministic hostile scenario through `scripts/ci_run.py`
+- writes result artifacts under `logs/showcase/`
 
-## Product Surface
+## Test/CI Script
 
-### Simple Mode (Primary Fast Path)
+Primary noninteractive execution script:
 
-Simple Mode is intentionally reduced to a small number of controls:
+```bash
+python3 scripts/ci_run.py --help
+```
 
-- preset scenario
-- challenge level
-- injection zone (drag-and-drop, browse, or paste)
+Typical local run:
 
-Then click **Build It**.
-
-### Why Simple Mode Matters
-
-Simple Mode is optimized for speed during rapid validation and early verification.
-
-It allows non-experts to generate meaningful environment recipes without touching 12 low-level controls.
-
-### Advanced Mode (Full Control)
-
-Advanced Mode exposes all environment controls and optional local spin-up:
-
-- intent text
-- injection language
-- network profile
-- latency
-- packet loss
-- CPU budget
-- memory budget
-- database engine
-- six fault/security toggles
-- target path inside container
-- optional run command
-- optional local `docker compose up -d`
-
----
-
-## How It Works End to End
-
-### Step 1: Define Scenario
-
-A scenario is set by preset + challenge profile, with optional advanced overrides.
-
-### Step 2: Provide Payload
-
-You can:
-
-- drag and drop a code file
-- browse for a code file
-- paste code directly
-
-Supported upload extensions:
-
-- `.py`
-- `.js`
-- `.ts`
-- `.tsx`
-- `.sh`
-- `.bash`
-- `.zsh`
-- `.txt`
-- `.json`
-- `.md`
-
-File upload automatically infers language when possible and updates default target path/run command.
-
-### Step 3: Build Package
-
-On **Build It**, SPOOLER writes:
-
-- compose recipe in `recipes/`
-- payload and bootstrap in `injections/<run-id>/`
-
-### Step 4: Runtime Injection Model
-
-At container start:
-
-1. `injections/<run-id>` is mounted to `/opt/spooler/injection`.
-2. `bootstrap.sh` copies `payload.<ext>` to `SPOOLER_TARGET_PATH`.
-3. If `SPOOLER_RUN_COMMAND` is non-empty, it executes.
-
-### Step 5: Optional Local Spin-Up
-
-If enabled in Advanced Mode, SPOOLER attempts:
-
-`docker compose -f recipes/spool-<timestamp>.yml up -d --remove-orphans`
-
----
-
-## The Mock File Question (What It Is Actually For)
-
-This is the key mental model:
-
-The sample file is not your full application.
-
-It is a **probe payload** that gets injected into the target container path and optionally executed.
-
-Use it to:
-
-- verify environment variables are being passed correctly
-- simulate retry/backoff behavior under stress
-- demonstrate deterministic reproduction of failure modes
-- show how generated code or test code behaves in hostile presets
-
-In short:
-
-The payload is your controllable test probe.
-
----
-
-## Validation Payload Pack
-
-Use these files as ready-to-run payload options:
-
-- `payload_probes/xbow_qa_probe.py`
-- `payload_probes/xbow_qa_probe.js`
-- `payload_probes/xbow_qa_probe.sh`
-
-How to use it:
-
-1. In SPOOLER, choose a preset (for example `CPU Spike Recovery` or `Packet Loss Retry Trap`).
-2. Drag/drop a payload file into Injection Zone.
-3. Keep matching target path/run command for the selected language.
-4. Click **Build It**.
-5. Optionally run the generated compose command.
-
-What it validates:
-
-- reads environment variables from generated recipe
-- simulates dependency instability
-- applies retries with exponential backoff
-- exits non-zero when retries are exhausted
-
----
-
-## Operator Docs Included
-
-- `docs/OPERATIONS_RUNBOOK.md` for a concise live walkthrough flow and fallback handling
-- `docs/PORTFOLIO_PITCH.md` for portfolio text and executive talking points
-
----
-
-## Scenario Catalog (Current Presets)
+```bash
+python3 scripts/ci_run.py \
+  --run-id spool-ci-local \
+  --payload payload_probes/templates/python_retry_probe.py \
+  --network-profile 3g_degraded \
+  --latency-ms 180 \
+  --packet-loss-pct 8 \
+  --cpu-budget 2 \
+  --memory-budget 1g \
+  --third-party-outage \
+  --chaos-mode \
+  --artifact-dir logs/ci
+```
+
+CI workflow example:
+
+- `.github/workflows/ci-execution.yml`
+
+Result artifacts include:
+
+- `<run-id>.result.json`
+- `<run-id>.compose-up.log`
+- `<run-id>.compose-down.log`
+- `<run-id>.spool-target.log`
+- `<run-id>.third-party-sim.log`
+
+## Runtime Contract and Enforcement
+
+SPOOLER emits env vars including:
+
+- `INTENT`
+- `NETWORK_PROFILE`
+- `LATENCY_MS`
+- `PACKET_LOSS_PCT`
+- `CPU_BUDGET`
+- `MEMORY_BUDGET`
+- `DB_ENGINE`
+- `SPOOLER_TARGET_PATH`
+- `SPOOLER_RUN_COMMAND`
+- `CHAOS_MODE`
+- `VULNERABLE_DOM`
+- `SQL_INJECTION`
+- `AUTH_BYPASS`
+- `THIRD_PARTY_OUTAGE`
+- `STRICT_RATE_LIMIT`
+- `THIRD_PARTY_ENDPOINT`
+
+Enforcement path:
+
+- Compose applies real container constraints (`cpus`, `mem_limit`)
+- Bootstrap applies `tc netem` latency/loss on container interface
+- Runtime controller interprets contract and applies retries/backoff/fault behavior
+- Third-party simulation service provides healthy/hard-outage/intermittent upstream behavior
+
+## Scenario Presets and Modules
+
+Built-in presets include:
 
 - Slow Mobile + Vulnerable DOM
 - Auth Chaos Drill
@@ -224,171 +177,83 @@ Challenge levels:
 - Hard
 - Extreme
 
----
+Internal extensibility:
 
-## Environment Variable Contract
+- `spooler_modules/registry.py`
+- `spooler_modules/builtin_scenarios.py`
+- `spooler_modules/builtin_faults.py`
 
-SPOOLER writes these variables into `spool-target`:
+Add future scenario/fault modules through registration without expanding one large app file.
 
-- `INTENT`
-- `NETWORK_PROFILE`
-- `LATENCY_MS`
-- `PACKET_LOSS_PCT`
-- `CPU_BUDGET`
-- `MEMORY_BUDGET`
-- `DB_ENGINE`
-- `SPOOLER_TARGET_PATH`
-- `SPOOLER_RUN_COMMAND`
-- `CHAOS_MODE`
-- `VULNERABLE_DOM`
-- `SQL_INJECTION`
-- `AUTH_BYPASS`
-- `THIRD_PARTY_OUTAGE`
-- `STRICT_RATE_LIMIT`
+## Payload Probes
 
-DB sidecar behavior:
+Templates:
 
-- `Postgres 15` -> adds `postgres:15` service
-- `MySQL 8` -> adds `mysql:8` service
-- `MongoDB 7` -> adds `mongo:7` service
-- `SQLite (No DB Container)` -> no DB sidecar service
+- `payload_probes/templates/python_retry_probe.py`
+- `payload_probes/templates/js_fallback_probe.js`
+- `payload_probes/templates/shell_outage_probe.sh`
 
----
+Examples:
 
-## Quick Start
+- `payload_probes/examples/python_auth_latency_probe.py`
+- `payload_probes/examples/shell_sqlish_failure_probe.sh`
 
-### 1. Local Setup
+## Scenario Export/Import
 
-```bash
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-```
+- Export current scenario from UI as JSON
+- Re-import JSON to restore scenario settings
+- Schema fields are versioned in-app for compatibility checks
 
-### 2. Build Target Agent Image (Required for Local Spin-Up)
+## Run History and Results View
 
-```bash
-./scripts/build-target-agent-image.sh
-```
+SPOOLER persists basic run records to:
 
-Alternative command:
+- `logs/run_history.jsonl`
 
-```bash
-docker build -t spooler/target-agent:latest -f docker/target-agent/Dockerfile .
-```
+UI provides:
 
-### 3. Run App
-
-```bash
-streamlit run app.py
-```
-
-### 4. Build a Recipe
-
-- choose preset
-- choose challenge level
-- upload or paste payload
-- click **Build It**
-
-### 5. Start Generated Environment (Optional)
-
-```bash
-docker compose -f recipes/spool-<timestamp>.yml up -d --remove-orphans
-```
-
-### 6. Tear Down
-
-```bash
-docker compose -f recipes/spool-<timestamp>.yml down -v
-```
-
----
-
-## 60-Second Rapid Walkthrough
-
-1. Open SPOOLER and pick `Packet Loss Retry Trap`.
-2. Set challenge to `Hard`.
-3. Upload `payload_probes/xbow_qa_probe.py`.
-4. Click **Build It**.
-5. Show generated files in `recipes/` and `injections/`.
-6. Run generated compose command.
-7. Explain that the same run can now be replayed by anyone from the emitted artifacts.
-
----
+- status filter (`Pass`, `Fail`, `Recipe Only`, `Unknown`)
+- run-id search
+- run detail view
+- artifact path visibility and downloads
+- compose/inspect/log output view
 
 ## Repository Layout
 
 ```text
 SPOOLER/
   app.py
-  requirements.txt
-  README.md
-  assets/
-    Spooler_logo.png
-    SPOOLER_background.png
+  scripts/
+    build-target-agent-image.sh
+    ci_run.py
+    showcase_run.sh
+  docker/
+    target-agent/
+      Dockerfile
+      runtime_controller.py
+      apply_netem.sh
+    third-party-sim/
+      server.py
   payload_probes/
-    xbow_qa_probe.py
-    xbow_qa_probe.js
-    xbow_qa_probe.sh
-  docs/
-    OPERATIONS_RUNBOOK.md
-    PORTFOLIO_PITCH.md
+    templates/
+    examples/
+  spooler_modules/
+    registry.py
+    builtin_scenarios.py
+    builtin_faults.py
+  .github/workflows/
+    ci-execution.yml
   recipes/
-    spool-<timestamp>.yml
   injections/
-    spool-<timestamp>/
-      payload.<ext>
-      bootstrap.sh
+  logs/
 ```
 
----
+## Notes / Limits
 
-## Current Constraints
-
-- `spooler/target-agent:latest` is assumed to exist locally or in accessible registry.
-- IDE Connect is currently a concept-only UI section (not wired to real IDE APIs yet).
-- Local spin-up uses Docker CLI availability on host machine.
-- Network stress is represented via environment configuration in recipe output (not full Linux traffic shaping in current build).
-
----
-
-## Suggested Next Iteration (Portfolio Roadmap)
-
-### 1. Monorepo Expansion
-
-Split into clear modules:
-
-- `ui/` Streamlit front end
-- `orchestrator/` recipe generation and validation
-- `injector/` bootstrap generation and payload contract
-- `profiles/` scenario presets and difficulty models
-- `runner/` local and CI execution adapters
-
-### 2. CI Validation Matrix
-
-Generate matrix builds for presets + difficulty combinations with pass/fail reports.
-
-### 3. Real IDE Connector
-
-Replace concept expander with actual read-only file import from selected IDE workspace.
-
-### 4. Artifact Registry
-
-Store generated scenario packages with metadata for replay and audit.
-
----
-
-## Portfolio Talking Points
-
-- Demonstrates product thinking, not just scripting.
-- Balances fast UX (Simple Mode) with depth (Advanced Mode).
-- Produces deterministic artifacts for reproducibility.
-- Turns vague "test it in bad environments" into a concrete, replayable workflow.
-- Designed as a base for scaling into a broader environment-testing monorepo.
-
----
+- Designed for local Docker-first workflows.
+- `tc/netem` enforcement depends on Docker runtime capabilities and container privileges (`NET_ADMIN`).
+- CI mode is intentionally minimal and artifact-focused.
 
 ## License
 
-No license file is currently included in this repository.
-Add one before publishing if you want clear reuse terms.
+MIT. See `LICENSE`.

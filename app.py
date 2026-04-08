@@ -1,18 +1,24 @@
 import base64
+import json
 import subprocess
 from datetime import datetime
 from html import escape
 from pathlib import Path
 
 import streamlit as st
+from spooler_modules import get_fault_modules, get_preset_scenarios
 
 ROOT = Path(__file__).resolve().parent
 ASSETS_DIR = ROOT / "assets"
 RECIPES_DIR = ROOT / "recipes"
 INJECTIONS_DIR = ROOT / "injections"
+LOGS_DIR = ROOT / "logs"
+RUN_HISTORY_FILE = LOGS_DIR / "run_history.jsonl"
+MAX_PERSISTED_OUTPUT_CHARS = 20_000
 
 RECIPES_DIR.mkdir(parents=True, exist_ok=True)
 INJECTIONS_DIR.mkdir(parents=True, exist_ok=True)
+LOGS_DIR.mkdir(parents=True, exist_ok=True)
 
 NETWORK_OPTIONS = {
     "5G Stable": "5g_stable",
@@ -87,208 +93,45 @@ FILE_EXTENSION_TO_LANGUAGE = {
     ".zsh": "shell",
 }
 
-PRESET_SCENARIOS = {
-    "Slow Mobile + Vulnerable DOM": {
-        "intent_text": "Validate generated fixes under degraded mobile conditions with DOM exploit exposure.",
-        "network_profile_label": "3G Degraded",
-        "latency_ms": 520,
-        "packet_loss_pct": 8,
-        "cpu_budget_label": "1 vCPU",
-        "memory_budget_label": "512 MB",
-        "db_engine_label": "Postgres 15",
-        "chaos_mode": False,
-        "vulnerable_dom": True,
-        "sql_injection": False,
-        "auth_bypass": False,
-        "third_party_outage": False,
-        "strict_rate_limit": True,
-        "injection_language": "python",
-        "target_path": "/workspace/injected/main.py",
-        "run_command": "python /workspace/injected/main.py",
-        "payload_text": "print('simulate degraded mobile edge case')",
-        "spin_now": False,
-    },
-    "Auth Chaos Drill": {
-        "intent_text": "Stress test generated patches for token expiry races, bypass behavior, and partial upstream failures.",
-        "network_profile_label": "Edge Failure",
-        "latency_ms": 390,
-        "packet_loss_pct": 5,
-        "cpu_budget_label": "2 vCPU",
-        "memory_budget_label": "1 GB",
-        "db_engine_label": "MySQL 8",
-        "chaos_mode": True,
-        "vulnerable_dom": False,
-        "sql_injection": False,
-        "auth_bypass": True,
-        "third_party_outage": True,
-        "strict_rate_limit": True,
-        "injection_language": "node",
-        "target_path": "/workspace/injected/main.js",
-        "run_command": "node /workspace/injected/main.js",
-        "payload_text": "console.log('auth chaos drill active');",
-        "spin_now": False,
-    },
-    "SQL Storm + Tight Limits": {
-        "intent_text": "Benchmark generated sanitization logic under SQL attack pressure and strict rate limiting.",
-        "network_profile_label": "WiFi Office",
-        "latency_ms": 140,
-        "packet_loss_pct": 1,
-        "cpu_budget_label": "4 vCPU",
-        "memory_budget_label": "2 GB",
-        "db_engine_label": "Postgres 15",
-        "chaos_mode": True,
-        "vulnerable_dom": False,
-        "sql_injection": True,
-        "auth_bypass": False,
-        "third_party_outage": False,
-        "strict_rate_limit": True,
-        "injection_language": "shell",
-        "target_path": "/workspace/injected/main.sh",
-        "run_command": "sh /workspace/injected/main.sh",
-        "payload_text": "echo 'running sql storm drill'",
-        "spin_now": False,
-    },
-    "Third-Party Timeout Cascade": {
-        "intent_text": "Test generated patches when upstream dependencies are unstable and requests timeout intermittently.",
-        "network_profile_label": "3G Degraded",
-        "latency_ms": 460,
-        "packet_loss_pct": 6,
-        "cpu_budget_label": "2 vCPU",
-        "memory_budget_label": "1 GB",
-        "db_engine_label": "Postgres 15",
-        "chaos_mode": True,
-        "vulnerable_dom": False,
-        "sql_injection": False,
-        "auth_bypass": False,
-        "third_party_outage": True,
-        "strict_rate_limit": True,
-        "injection_language": "python",
-        "target_path": "/workspace/injected/main.py",
-        "run_command": "python /workspace/injected/main.py",
-        "payload_text": "print('simulate upstream timeout cascade')",
-        "spin_now": False,
-    },
-    "CPU Spike Recovery": {
-        "intent_text": "Evaluate whether generated retries and backoff logic survive CPU starvation windows.",
-        "network_profile_label": "WiFi Office",
-        "latency_ms": 170,
-        "packet_loss_pct": 2,
-        "cpu_budget_label": "1 vCPU",
-        "memory_budget_label": "1 GB",
-        "db_engine_label": "MySQL 8",
-        "chaos_mode": True,
-        "vulnerable_dom": False,
-        "sql_injection": False,
-        "auth_bypass": False,
-        "third_party_outage": True,
-        "strict_rate_limit": False,
-        "injection_language": "node",
-        "target_path": "/workspace/injected/main.js",
-        "run_command": "node /workspace/injected/main.js",
-        "payload_text": "console.log('cpu spike resilience check');",
-        "spin_now": False,
-    },
-    "Memory Pressure Leak Hunt": {
-        "intent_text": "Probe generated code under low-memory constraints to surface hidden leak behavior and crashes.",
-        "network_profile_label": "WiFi Office",
-        "latency_ms": 120,
-        "packet_loss_pct": 1,
-        "cpu_budget_label": "2 vCPU",
-        "memory_budget_label": "512 MB",
-        "db_engine_label": "MongoDB 7",
-        "chaos_mode": True,
-        "vulnerable_dom": False,
-        "sql_injection": False,
-        "auth_bypass": False,
-        "third_party_outage": False,
-        "strict_rate_limit": True,
-        "injection_language": "python",
-        "target_path": "/workspace/injected/main.py",
-        "run_command": "python /workspace/injected/main.py",
-        "payload_text": "print('memory pressure leak hunt active')",
-        "spin_now": False,
-    },
-    "Packet Loss Retry Trap": {
-        "intent_text": "Validate idempotency and retry logic when packet loss causes duplicate and partial requests.",
-        "network_profile_label": "Edge Failure",
-        "latency_ms": 410,
-        "packet_loss_pct": 18,
-        "cpu_budget_label": "2 vCPU",
-        "memory_budget_label": "1 GB",
-        "db_engine_label": "Postgres 15",
-        "chaos_mode": True,
-        "vulnerable_dom": False,
-        "sql_injection": False,
-        "auth_bypass": True,
-        "third_party_outage": True,
-        "strict_rate_limit": True,
-        "injection_language": "python",
-        "target_path": "/workspace/injected/main.py",
-        "run_command": "python /workspace/injected/main.py",
-        "payload_text": "print('packet loss retry trap')",
-        "spin_now": False,
-    },
-    "Offline-First Failover": {
-        "intent_text": "Check whether generated code gracefully degrades when the network is mostly unavailable.",
-        "network_profile_label": "Edge Failure",
-        "latency_ms": 700,
-        "packet_loss_pct": 25,
-        "cpu_budget_label": "1 vCPU",
-        "memory_budget_label": "1 GB",
-        "db_engine_label": "SQLite (No DB Container)",
-        "chaos_mode": True,
-        "vulnerable_dom": False,
-        "sql_injection": False,
-        "auth_bypass": False,
-        "third_party_outage": True,
-        "strict_rate_limit": False,
-        "injection_language": "shell",
-        "target_path": "/workspace/injected/main.sh",
-        "run_command": "sh /workspace/injected/main.sh",
-        "payload_text": "echo 'offline-first failover check'",
-        "spin_now": False,
-    },
-    "No-DB Fallback Path": {
-        "intent_text": "Verify generated fallback logic when no external database container is available.",
-        "network_profile_label": "5G Stable",
-        "latency_ms": 50,
-        "packet_loss_pct": 0,
-        "cpu_budget_label": "2 vCPU",
-        "memory_budget_label": "2 GB",
-        "db_engine_label": "SQLite (No DB Container)",
-        "chaos_mode": False,
-        "vulnerable_dom": False,
-        "sql_injection": False,
-        "auth_bypass": False,
-        "third_party_outage": False,
-        "strict_rate_limit": False,
-        "injection_language": "python",
-        "target_path": "/workspace/injected/main.py",
-        "run_command": "python /workspace/injected/main.py",
-        "payload_text": "print('no-db fallback path check')",
-        "spin_now": False,
-    },
-    "Full Chaos Fire Drill": {
-        "intent_text": "Push generated code through an intentionally hostile stack: auth bypass, SQL risk, outages, and high loss.",
-        "network_profile_label": "Edge Failure",
-        "latency_ms": 780,
-        "packet_loss_pct": 22,
-        "cpu_budget_label": "1 vCPU",
-        "memory_budget_label": "512 MB",
-        "db_engine_label": "MySQL 8",
-        "chaos_mode": True,
-        "vulnerable_dom": True,
-        "sql_injection": True,
-        "auth_bypass": True,
-        "third_party_outage": True,
-        "strict_rate_limit": True,
-        "injection_language": "shell",
-        "target_path": "/workspace/injected/main.sh",
-        "run_command": "sh /workspace/injected/main.sh",
-        "payload_text": "echo 'full chaos fire drill active'",
-        "spin_now": False,
-    },
+SUPPORTED_INGEST_EXTENSIONS = {
+    ".py",
+    ".js",
+    ".ts",
+    ".tsx",
+    ".sh",
+    ".bash",
+    ".zsh",
+    ".txt",
+    ".json",
+    ".md",
 }
+
+SCENARIO_SCHEMA_NAME = "spooler-scenario"
+SCENARIO_SCHEMA_VERSION = 1
+
+PRESET_SCENARIOS = get_preset_scenarios()
+FAULT_MODULES = get_fault_modules()
+FAULT_STATE_KEYS = tuple(module.key for module in FAULT_MODULES)
+FAULT_DEFAULTS = {module.key: module.default_enabled for module in FAULT_MODULES}
+FAULT_ENV_VARS = {module.key: module.env_var for module in FAULT_MODULES}
+
+SCENARIO_EXPORT_KEYS = [
+    "selected_preset",
+    "difficulty_profile",
+    "quick_prompt",
+    "intent_text",
+    "advanced_mode",
+    "network_profile_label",
+    "latency_ms",
+    "packet_loss_pct",
+    "cpu_budget_label",
+    "memory_budget_label",
+    "db_engine_label",
+    *FAULT_STATE_KEYS,
+    "injection_language",
+    "target_path",
+    "run_command",
+]
 
 PRESET_AI_SECURITY_LENS = {
     "Slow Mobile + Vulnerable DOM": (
@@ -402,12 +245,7 @@ DEFAULT_STATE = {
     "cpu_budget_label": "2 vCPU",
     "memory_budget_label": "1 GB",
     "db_engine_label": "Postgres 15",
-    "chaos_mode": False,
-    "vulnerable_dom": True,
-    "sql_injection": False,
-    "auth_bypass": False,
-    "third_party_outage": False,
-    "strict_rate_limit": True,
+    **FAULT_DEFAULTS,
     "injection_language": "python",
     "target_path": "/workspace/injected/main.py",
     "run_command": "",
@@ -416,7 +254,7 @@ DEFAULT_STATE = {
     "payload_file_name": "",
     "last_upload_size": 0,
     "ide_choice": "VS Code",
-    "ide_concept_requested": False,
+    "ide_ingest_path": "",
 }
 
 MANUAL_SECTIONS = [
@@ -533,16 +371,16 @@ MANUAL_SECTIONS = [
         "action_id": "injection_zone",
     },
     {
-        "title": "IDE Connect (Concept)",
-        "overview": "IDE Connect is roadmap-only in this version and does not pull files yet.",
+        "title": "IDE Connect (Local Read-Only)",
+        "overview": "IDE Connect can import a local workspace file path into the payload editor in read-only mode.",
         "items": [
-            "Request IDE read permission captures intent but does not execute API integration.",
-            "Use upload or payload paste today for real artifact generation.",
-            "Treat this panel as future workflow context rather than active functionality.",
+            "Provide a workspace-relative or absolute path inside the current repository.",
+            "Imported file contents are copied into Injected Code Payload without modifying source files.",
+            "Language mapping still auto-adjusts target path and command defaults when extension is recognized.",
         ],
         "examples": [
-            "Current state: concept marker only, no external IDE read call.",
-            "Near-term practical workflow: export from IDE, then upload into Injection Zone.",
+            "Import payload_probes/xbow_qa_probe.py directly from workspace path input.",
+            "Point to a local patch file generated in your IDE and ingest it without drag-and-drop.",
         ],
     },
     {
@@ -742,14 +580,30 @@ def on_difficulty_change() -> None:
     apply_difficulty(profile)
 
 
-def decode_uploaded_file(uploaded_file) -> str:
-    raw = uploaded_file.getvalue()
+def decode_text_bytes(raw: bytes) -> str:
     for encoding in ("utf-8", "utf-16", "latin-1"):
         try:
             return raw.decode(encoding)
         except UnicodeDecodeError:
             continue
     return raw.decode("utf-8", errors="replace")
+
+
+def apply_payload_source(source_name: str, source_size: int, content: str) -> None:
+    st.session_state["payload_text"] = content
+    st.session_state["payload_file_name"] = source_name
+    st.session_state["last_upload_size"] = source_size
+
+    inferred = infer_language_from_filename(source_name)
+    if inferred:
+        st.session_state["injection_language"] = inferred
+        st.session_state["target_path"] = default_target_path_for_language(inferred)
+        st.session_state["run_command"] = default_run_command_for_language(inferred)
+
+
+def decode_uploaded_file(uploaded_file) -> str:
+    raw = uploaded_file.getvalue()
+    return decode_text_bytes(raw)
 
 
 def sync_uploaded_file(uploaded_file) -> None:
@@ -765,15 +619,164 @@ def sync_uploaded_file(uploaded_file) -> None:
         return
 
     content = decode_uploaded_file(uploaded_file)
-    st.session_state["payload_text"] = content
-    st.session_state["payload_file_name"] = current_name
-    st.session_state["last_upload_size"] = current_size
+    apply_payload_source(current_name, current_size, content)
 
-    inferred = infer_language_from_filename(current_name)
-    if inferred:
-        st.session_state["injection_language"] = inferred
-        st.session_state["target_path"] = default_target_path_for_language(inferred)
-        st.session_state["run_command"] = default_run_command_for_language(inferred)
+
+def ingest_payload_from_local_path(raw_path: str) -> tuple[bool, str]:
+    candidate = raw_path.strip()
+    if not candidate:
+        return False, "Enter a file path to import."
+
+    source_path = Path(candidate).expanduser()
+    if not source_path.is_absolute():
+        source_path = (ROOT / source_path).resolve()
+    else:
+        source_path = source_path.resolve()
+
+    workspace_root = ROOT.resolve()
+    try:
+        source_path.relative_to(workspace_root)
+    except ValueError:
+        return False, f"Path must be inside workspace: `{workspace_root}`"
+
+    if not source_path.exists():
+        return False, f"File not found: `{source_path}`"
+    if not source_path.is_file():
+        return False, f"Path is not a file: `{source_path}`"
+
+    suffix = source_path.suffix.lower()
+    if suffix not in SUPPORTED_INGEST_EXTENSIONS:
+        allowed = ", ".join(sorted(SUPPORTED_INGEST_EXTENSIONS))
+        return False, f"Unsupported extension `{suffix or '(none)'}`. Allowed: {allowed}"
+
+    raw = source_path.read_bytes()
+    content = decode_text_bytes(raw)
+    apply_payload_source(source_path.name, source_path.stat().st_size, content)
+    return True, f"Imported `{source_path}` into payload editor."
+
+
+def scenario_snapshot() -> dict[str, object]:
+    return {key: st.session_state.get(key) for key in SCENARIO_EXPORT_KEYS}
+
+
+def build_scenario_export_document() -> dict[str, object]:
+    return {
+        "schema": SCENARIO_SCHEMA_NAME,
+        "version": SCENARIO_SCHEMA_VERSION,
+        "exported_at": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "scenario": scenario_snapshot(),
+    }
+
+
+def coerce_bool(value: object, fallback: bool = False) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "on"}
+    return fallback
+
+
+def apply_imported_scenario(document: dict[str, object]) -> tuple[bool, str]:
+    if not isinstance(document, dict):
+        return False, "Scenario import failed: expected a JSON object."
+
+    schema = str(document.get("schema", "")).strip()
+    if schema and schema != SCENARIO_SCHEMA_NAME:
+        return False, f"Scenario import failed: unsupported schema `{schema}`."
+
+    version_raw = document.get("version", SCENARIO_SCHEMA_VERSION)
+    try:
+        version = int(version_raw)
+    except (TypeError, ValueError):
+        return False, "Scenario import failed: invalid version value."
+    if version > SCENARIO_SCHEMA_VERSION:
+        return False, f"Scenario import failed: version `{version}` is newer than supported."
+
+    scenario = document.get("scenario", document)
+    if not isinstance(scenario, dict):
+        return False, "Scenario import failed: `scenario` payload must be an object."
+
+    applied: list[str] = []
+
+    selected_preset = scenario.get("selected_preset")
+    if isinstance(selected_preset, str) and selected_preset in PRESET_SCENARIOS:
+        apply_preset(selected_preset)
+        applied.append("selected_preset")
+
+    difficulty = scenario.get("difficulty_profile")
+    if isinstance(difficulty, str) and difficulty in DIFFICULTY_PROFILES and difficulty != "Preset Default":
+        apply_difficulty(difficulty)
+        applied.append("difficulty_profile")
+
+    for key in SCENARIO_EXPORT_KEYS:
+        if key not in scenario:
+            continue
+        value = scenario[key]
+
+        if key == "selected_preset":
+            if isinstance(value, str) and value in PRESET_SCENARIOS:
+                st.session_state[key] = value
+            continue
+
+        if key == "difficulty_profile":
+            if isinstance(value, str) and value in DIFFICULTY_PROFILES:
+                st.session_state[key] = value
+                if value == "Preset Default":
+                    apply_preset(st.session_state["selected_preset"])
+            continue
+
+        if key == "advanced_mode" or key in FAULT_STATE_KEYS:
+            st.session_state[key] = coerce_bool(value, fallback=bool(st.session_state.get(key, False)))
+            applied.append(key)
+            continue
+
+        if key in {"latency_ms", "packet_loss_pct"}:
+            try:
+                st.session_state[key] = int(value)
+                applied.append(key)
+            except (TypeError, ValueError):
+                pass
+            continue
+
+        if key == "network_profile_label":
+            if isinstance(value, str) and value in NETWORK_OPTIONS:
+                st.session_state[key] = value
+                applied.append(key)
+            continue
+
+        if key == "cpu_budget_label":
+            if isinstance(value, str) and value in CPU_OPTIONS:
+                st.session_state[key] = value
+                applied.append(key)
+            continue
+
+        if key == "memory_budget_label":
+            if isinstance(value, str) and value in MEMORY_OPTIONS:
+                st.session_state[key] = value
+                applied.append(key)
+            continue
+
+        if key == "db_engine_label":
+            if isinstance(value, str) and value in DB_OPTIONS:
+                st.session_state[key] = value
+                applied.append(key)
+            continue
+
+        if key == "injection_language":
+            if isinstance(value, str) and value in INJECTION_EXTENSIONS:
+                st.session_state[key] = value
+                applied.append(key)
+            continue
+
+        if key in {"quick_prompt", "intent_text", "target_path", "run_command"}:
+            if value is not None:
+                st.session_state[key] = str(value)
+                applied.append(key)
+            continue
+
+    if not applied:
+        return False, "No recognized scenario fields were imported."
+    return True, f"Scenario imported ({len(set(applied))} fields applied)."
 
 
 def get_base64(path: Path) -> str:
@@ -1620,7 +1623,33 @@ def build_database_service_yaml(db_key: str) -> list[str]:
     return lines
 
 
+def build_third_party_sim_service_yaml(
+    run_id: str,
+    outage_enabled: str,
+    chaos_mode: str,
+) -> list[str]:
+    sim_script = str((ROOT / "docker" / "third-party-sim" / "server.py").resolve()).replace("\\", "\\\\").replace('"', '\\"')
+    return [
+        "  third-party-sim:",
+        "    image: python:3.12-slim",
+        f"    container_name: {run_id}-third-party-sim",
+        "    restart: unless-stopped",
+        "    environment:",
+        f'      OUTAGE_ENABLED: "{outage_enabled}"',
+        f'      CHAOS_MODE: "{chaos_mode}"',
+        '      SIM_PORT: "18080"',
+        "    volumes:",
+        "      - type: bind",
+        f'        source: "{sim_script}"',
+        "        target: /opt/spooler/third-party/server.py",
+        "        read_only: true",
+        "    command: >",
+        "      python /opt/spooler/third-party/server.py",
+    ]
+
+
 def build_compose_yaml(run_id: str, env_vars: dict[str, str]) -> str:
+    injection_source = str((INJECTIONS_DIR / run_id).resolve()).replace("\\", "\\\\").replace('"', '\\"')
     lines = [
         'version: "3.9"',
         "services:",
@@ -1628,6 +1657,12 @@ def build_compose_yaml(run_id: str, env_vars: dict[str, str]) -> str:
         "    image: spooler/target-agent:latest",
         f"    container_name: {run_id}",
         "    restart: unless-stopped",
+        "    depends_on:",
+        "      - third-party-sim",
+        "    cap_add:",
+        "      - NET_ADMIN",
+        f'    cpus: "{env_vars["CPU_BUDGET"]}"',
+        f'    mem_limit: "{env_vars["MEMORY_BUDGET"]}"',
         "    ports:",
         '      - "8080:80"',
         "    environment:",
@@ -1637,12 +1672,21 @@ def build_compose_yaml(run_id: str, env_vars: dict[str, str]) -> str:
     lines.extend(
         [
             "    volumes:",
-            f"      - ./injections/{run_id}:/opt/spooler/injection",
+            "      - type: bind",
+            f'        source: "{injection_source}"',
+            "        target: /opt/spooler/injection",
             "    command: >",
             "      sh -c \"if [ -f /opt/spooler/injection/bootstrap.sh ]; then sh /opt/spooler/injection/bootstrap.sh; fi; tail -f /dev/null\"",
         ]
     )
 
+    lines.extend(
+        build_third_party_sim_service_yaml(
+            run_id=run_id,
+            outage_enabled=env_vars["THIRD_PARTY_OUTAGE"],
+            chaos_mode=env_vars["CHAOS_MODE"],
+        )
+    )
     lines.extend(build_database_service_yaml(env_vars["DB_ENGINE"]))
     return "\n".join(lines) + "\n"
 
@@ -1677,9 +1721,23 @@ def write_injection_files(
         "mkdir -p \"$(dirname \"$TARGET_PATH\")\"\n"
         f"cp /opt/spooler/injection/{payload_filename} \"$TARGET_PATH\"\n"
         "chmod +x \"$TARGET_PATH\" || true\n"
-        "if [ -n \"${SPOOLER_RUN_COMMAND:-}\" ]; then\n"
-        "  sh -lc \"$SPOOLER_RUN_COMMAND\"\n"
+        "if [ -x /opt/spooler/runtime/apply_netem.sh ]; then\n"
+        "  /opt/spooler/runtime/apply_netem.sh\n"
         "fi\n"
+        "if [ -n \"${SPOOLER_RUN_COMMAND:-}\" ]; then\n"
+        "  echo \"SPOOLER_RUN_COMMAND=$SPOOLER_RUN_COMMAND\"\n"
+        "  set +e\n"
+        "  if [ -x /opt/spooler/runtime/runtime_controller.py ]; then\n"
+        "    python3 /opt/spooler/runtime/runtime_controller.py \"$SPOOLER_RUN_COMMAND\"\n"
+        "  else\n"
+        "    sh -lc \"$SPOOLER_RUN_COMMAND\"\n"
+        "  fi\n"
+        "  RUN_EXIT_CODE=$?\n"
+        "  set -e\n"
+        "  echo \"SPOOLER_RUN_COMMAND_EXIT_CODE:$RUN_EXIT_CODE\"\n"
+        "  exit \"$RUN_EXIT_CODE\"\n"
+        "fi\n"
+        "echo \"SPOOLER_RUN_COMMAND_SKIPPED\"\n"
     )
     bootstrap_path = injection_dir / "bootstrap.sh"
     bootstrap_path.write_text(bootstrap, encoding="utf-8")
@@ -1703,16 +1761,252 @@ def run_local_compose(recipe_file: Path) -> tuple[bool, str]:
     return False, output or "Docker compose failed with a non-zero exit code."
 
 
+def inspect_container_state(container_name: str) -> tuple[bool, str]:
+    command = [
+        "docker",
+        "inspect",
+        "--format",
+        "status={{.State.Status}} exit_code={{.State.ExitCode}} error={{.State.Error}}",
+        container_name,
+    ]
+    try:
+        result = subprocess.run(command, capture_output=True, text=True, check=False, timeout=20)
+    except FileNotFoundError:
+        return False, "Docker CLI not found."
+    except subprocess.TimeoutExpired:
+        return False, "Container inspect timed out after 20s."
+
+    output = (result.stdout + "\n" + result.stderr).strip()
+    if result.returncode == 0:
+        return True, output
+    return False, output or f"Container `{container_name}` not found."
+
+
+def get_container_logs(container_name: str, tail_lines: int = 200) -> tuple[bool, str]:
+    command = ["docker", "logs", "--tail", str(tail_lines), container_name]
+    try:
+        result = subprocess.run(command, capture_output=True, text=True, check=False, timeout=20)
+    except FileNotFoundError:
+        return False, "Docker CLI not found."
+    except subprocess.TimeoutExpired:
+        return False, "Docker logs timed out after 20s."
+
+    output = (result.stdout + "\n" + result.stderr).strip()
+    if result.returncode == 0:
+        return True, output
+    return False, output or f"Could not read logs for container `{container_name}`."
+
+
+def parse_payload_exit_code(log_output: str) -> int | None:
+    marker = "SPOOLER_RUN_COMMAND_EXIT_CODE:"
+    last_exit_code: int | None = None
+    for line in log_output.splitlines():
+        if marker not in line:
+            continue
+        value = line.split(marker, 1)[1].strip()
+        try:
+            last_exit_code = int(value)
+        except ValueError:
+            continue
+    return last_exit_code
+
+
+def clamp_persisted_output(text: str, max_chars: int = MAX_PERSISTED_OUTPUT_CHARS) -> str:
+    normalized = (text or "").strip()
+    if len(normalized) <= max_chars:
+        return normalized
+    return f"{normalized[:max_chars]}\n...[truncated]..."
+
+
+def to_history_path(path: Path) -> str:
+    try:
+        return str(path.resolve().relative_to(ROOT.resolve()))
+    except ValueError:
+        return str(path.resolve())
+
+
+def resolve_history_path(path_text: str) -> Path:
+    candidate = Path(path_text.strip())
+    if candidate.is_absolute():
+        return candidate
+    return (ROOT / candidate).resolve()
+
+
+def append_run_history_record(record: dict[str, object]) -> tuple[bool, str]:
+    try:
+        with RUN_HISTORY_FILE.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(record, ensure_ascii=False) + "\n")
+    except OSError as exc:
+        return False, f"Failed to persist run history: {exc}"
+    return True, ""
+
+
+def load_run_history_records(limit: int = 200) -> list[dict[str, object]]:
+    if not RUN_HISTORY_FILE.exists():
+        return []
+
+    records: list[dict[str, object]] = []
+    for raw_line in RUN_HISTORY_FILE.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        try:
+            item = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(item, dict):
+            records.append(item)
+
+    if not records:
+        return []
+    return records[-limit:][::-1]
+
+
+def format_run_status(status: str) -> str:
+    normalized = status.strip().lower()
+    if normalized == "pass":
+        return "Pass"
+    if normalized == "fail":
+        return "Fail"
+    if normalized == "recipe_only":
+        return "Recipe Only"
+    if normalized == "unknown":
+        return "Unknown"
+    return "Unknown"
+
+
+def render_run_history_panel() -> None:
+    st.subheader("Run Results & History")
+    records = load_run_history_records(limit=300)
+    if not records:
+        st.info("No persisted runs yet. Build a scenario to create the first history record.")
+        return
+
+    status_filter = st.selectbox(
+        "Status Filter",
+        ["All", "Pass", "Fail", "Recipe Only", "Unknown"],
+        key="history_status_filter",
+    )
+    run_query = st.text_input(
+        "Find Run ID",
+        key="history_run_query",
+        placeholder="spool-20260408-103045",
+    ).strip()
+
+    filter_value = {
+        "Pass": "pass",
+        "Fail": "fail",
+        "Recipe Only": "recipe_only",
+        "Unknown": "unknown",
+    }.get(status_filter, "")
+
+    filtered_records: list[dict[str, object]] = []
+    for record in records:
+        run_id = str(record.get("run_id", "")).strip()
+        if not run_id:
+            continue
+        status = str(record.get("status", "unknown")).strip().lower()
+        if filter_value and status != filter_value:
+            continue
+        if run_query and run_query.lower() not in run_id.lower():
+            continue
+        filtered_records.append(record)
+
+    if not filtered_records:
+        st.info("No runs match the active filters.")
+        return
+
+    preview_rows = [
+        {
+            "Run ID": str(record.get("run_id", "")),
+            "Status": format_run_status(str(record.get("status", "unknown"))),
+            "Created (UTC)": str(record.get("created_at_utc", "")),
+            "Preset": str(record.get("selected_preset", "")),
+        }
+        for record in filtered_records[:25]
+    ]
+    st.dataframe(preview_rows, hide_index=True, use_container_width=True)
+
+    selected_index = st.selectbox(
+        "Run Detail",
+        options=list(range(len(filtered_records))),
+        format_func=lambda i: (
+            f"{filtered_records[i].get('run_id', '')} | "
+            f"{format_run_status(str(filtered_records[i].get('status', 'unknown')))} | "
+            f"{filtered_records[i].get('created_at_utc', '')}"
+        ),
+        key="history_selected_run_index",
+    )
+    selected = filtered_records[selected_index]
+    selected_status = str(selected.get("status", "unknown"))
+    selected_status_label = format_run_status(selected_status)
+    if selected_status == "pass":
+        st.success(f"Status: {selected_status_label}")
+    elif selected_status == "fail":
+        st.error(f"Status: {selected_status_label}")
+    else:
+        st.info(f"Status: {selected_status_label}")
+
+    st.write(f"Run ID / Container: `{selected.get('run_id', '')}`")
+    st.write(f"Created (UTC): `{selected.get('created_at_utc', '')}`")
+    st.write(f"Scenario: `{selected.get('selected_preset', '')}`")
+    st.write(f"Challenge: `{selected.get('difficulty_profile', '')}`")
+    run_command = str(selected.get("run_command", "")).strip()
+    st.write(f"Run command: `{run_command}`" if run_command else "Run command: `(none)`")
+
+    summary = str(selected.get("scenario_summary", "")).strip()
+    if summary:
+        st.caption("Scenario Summary")
+        st.code(summary, language="text")
+
+    run_id_for_key = str(selected.get("run_id", "unknown"))
+    artifact_paths = [
+        ("Recipe", str(selected.get("recipe_path", "")).strip()),
+        ("Payload", str(selected.get("payload_path", "")).strip()),
+        ("Bootstrap", str(selected.get("bootstrap_path", "")).strip()),
+    ]
+    for artifact_label, path_text in artifact_paths:
+        if not path_text:
+            continue
+        resolved = resolve_history_path(path_text)
+        exists = resolved.exists()
+        st.write(f"{artifact_label}: `{resolved}` ({'found' if exists else 'missing'})")
+        if exists and resolved.is_file():
+            try:
+                data = resolved.read_text(encoding="utf-8")
+            except OSError:
+                data = ""
+            if data:
+                st.download_button(
+                    f"Download {artifact_label}",
+                    data=data,
+                    file_name=resolved.name,
+                    mime="text/plain",
+                    key=f"history-download-{artifact_label.lower()}-{run_id_for_key}",
+                )
+
+    compose_output = str(selected.get("compose_output", "")).strip()
+    if compose_output:
+        st.caption("Compose Output")
+        st.code(compose_output, language="bash")
+
+    inspect_output = str(selected.get("inspect_output", "")).strip()
+    if inspect_output:
+        st.caption("Container State")
+        st.code(inspect_output, language="bash")
+
+    logs_output = str(selected.get("logs_output", "")).strip()
+    if logs_output:
+        st.caption("Container Logs")
+        st.code(logs_output, language="bash")
+
 def build_effective_settings_line() -> str:
-    toggles = {
-        "chaos": st.session_state["chaos_mode"],
-        "vuln_dom": st.session_state["vulnerable_dom"],
-        "sqli": st.session_state["sql_injection"],
-        "auth_bypass": st.session_state["auth_bypass"],
-        "outage": st.session_state["third_party_outage"],
-        "rate_limit": st.session_state["strict_rate_limit"],
-    }
-    toggle_text = " | ".join([f"{name}:{'on' if enabled else 'off'}" for name, enabled in toggles.items()])
+    toggle_text = " | ".join(
+        [
+            f"{module.ticker_name}:{'on' if st.session_state[module.key] else 'off'}"
+            for module in FAULT_MODULES
+        ]
+    )
     return (
         f"preset={st.session_state['selected_preset']} | "
         f"level={st.session_state['difficulty_profile']} | "
@@ -1727,7 +2021,7 @@ def build_effective_settings_line() -> str:
 
 
 def build_effective_settings_rows() -> list[tuple[str, str]]:
-    return [
+    rows = [
         ("Preset", st.session_state["selected_preset"]),
         ("Challenge", st.session_state["difficulty_profile"]),
         ("Network", NETWORK_OPTIONS[st.session_state["network_profile_label"]]),
@@ -1736,13 +2030,14 @@ def build_effective_settings_rows() -> list[tuple[str, str]]:
         ("CPU Budget", CPU_OPTIONS[st.session_state["cpu_budget_label"]]),
         ("Memory Budget", MEMORY_OPTIONS[st.session_state["memory_budget_label"]]),
         ("Database", DB_OPTIONS[st.session_state["db_engine_label"]]),
-        ("Chaos Mode", "On" if st.session_state["chaos_mode"] else "Off"),
-        ("Vulnerable DOM", "On" if st.session_state["vulnerable_dom"] else "Off"),
-        ("SQL Injection Surface", "On" if st.session_state["sql_injection"] else "Off"),
-        ("Auth Bypass Path", "On" if st.session_state["auth_bypass"] else "Off"),
-        ("Third-Party Outage", "On" if st.session_state["third_party_outage"] else "Off"),
-        ("Strict Rate Limiting", "On" if st.session_state["strict_rate_limit"] else "Off"),
     ]
+    rows.extend(
+        [
+            (module.label, "On" if st.session_state[module.key] else "Off")
+            for module in FAULT_MODULES
+        ]
+    )
+    return rows
 
 
 def render_preset_ticker() -> None:
@@ -2134,6 +2429,36 @@ maybe_render_guide(
         "If both prompt and advanced intent are set, the prompt is used as the primary intent value. If prompt is empty, SPOOLER falls back to advanced intent and then preset name, so every package still has a meaningful objective label.",
     ],
 )
+
+with st.expander("Scenario Export / Import"):
+    scenario_doc = build_scenario_export_document()
+    st.download_button(
+        "Export Scenario JSON",
+        data=json.dumps(scenario_doc, indent=2, sort_keys=True),
+        file_name=f"spooler-scenario-{datetime.now().strftime('%Y%m%d-%H%M%S')}.json",
+        mime="application/json",
+    )
+    imported_scenario_file = st.file_uploader(
+        "Import Scenario JSON",
+        type=["json"],
+        key="scenario_import_file",
+    )
+    if st.button("Apply Imported Scenario"):
+        if imported_scenario_file is None:
+            st.error("Select a scenario JSON file to import.")
+        else:
+            try:
+                imported_text = decode_text_bytes(imported_scenario_file.getvalue())
+                imported_doc = json.loads(imported_text)
+            except Exception as exc:
+                st.error(f"Scenario import failed: {exc}")
+            else:
+                ok, message = apply_imported_scenario(imported_doc)
+                if ok:
+                    st.success(message)
+                else:
+                    st.error(message)
+
 st.markdown("</div>", unsafe_allow_html=True)
 st.markdown("</div>", unsafe_allow_html=True)
 
@@ -2215,7 +2540,7 @@ maybe_render_guide(
 st.markdown('<div class="section-label">Injection Zone</div>', unsafe_allow_html=True)
 uploaded_file = st.file_uploader(
     "Drag + drop a code file here, or click to browse",
-    type=["py", "js", "ts", "tsx", "sh", "bash", "zsh", "txt", "json", "md"],
+    type=[extension.lstrip(".") for extension in sorted(SUPPORTED_INGEST_EXTENSIONS)],
 )
 sync_uploaded_file(uploaded_file)
 maybe_render_guide(
@@ -2248,22 +2573,26 @@ maybe_render_guide(
     ],
 )
 
-with st.expander("IDE Connect (Concept)"):
-    st.write(
-        "Future workflow concept: connect your IDE and request read-only project access so SPOOLER can pull the "
-        "latest file automatically before injection."
-    )
+with st.expander("IDE Connect (Local Read-Only)"):
+    st.write("Import a file from your local workspace path in read-only mode and copy it into the payload editor.")
     st.selectbox("IDE", ["VS Code", "Cursor", "JetBrains"], key="ide_choice")
-    if st.button("Request IDE read permission (concept)"):
-        st.session_state["ide_concept_requested"] = True
-    if st.session_state["ide_concept_requested"]:
-        st.info("Concept event captured: IDE permission request staged (not yet wired).")
+    st.text_input(
+        "Workspace File Path",
+        key="ide_ingest_path",
+        placeholder="payload_probes/xbow_qa_probe.py",
+    )
+    if st.button("Import Workspace File"):
+        ok, message = ingest_payload_from_local_path(st.session_state["ide_ingest_path"])
+        if ok:
+            st.success(message)
+        else:
+            st.error(message)
     maybe_render_guide(
-        "IDE Connect Concept",
-        "Preview of future direct pull flow from IDE workspaces.",
+        "IDE Connect",
+        "Read-only local workspace file import into Injection Zone.",
         [
-            "This section represents the planned workflow for controlled read-only file pull from an IDE workspace into the injection path.",
-            "Current behavior records intent only and does not call external IDE APIs. It remains intentionally non-operational in this version.",
+            "Provide a local workspace path to import file contents directly into the payload editor without editing the source file.",
+            "Current implementation is local-path based and intentionally avoids remote IDE APIs or OAuth complexity.",
         ],
     )
 
@@ -2295,18 +2624,25 @@ if st.button("Build It", type="primary"):
         "CPU_BUDGET": CPU_OPTIONS[st.session_state["cpu_budget_label"]],
         "MEMORY_BUDGET": MEMORY_OPTIONS[st.session_state["memory_budget_label"]],
         "DB_ENGINE": DB_OPTIONS[st.session_state["db_engine_label"]],
+        "THIRD_PARTY_ENDPOINT": "http://third-party-sim:18080/third-party",
         "SPOOLER_TARGET_PATH": st.session_state["target_path"].strip() or "/workspace/injected/main.py",
         "SPOOLER_RUN_COMMAND": st.session_state["run_command"].strip(),
-        "CHAOS_MODE": to_env_bool(st.session_state["chaos_mode"]),
-        "VULNERABLE_DOM": to_env_bool(st.session_state["vulnerable_dom"]),
-        "SQL_INJECTION": to_env_bool(st.session_state["sql_injection"]),
-        "AUTH_BYPASS": to_env_bool(st.session_state["auth_bypass"]),
-        "THIRD_PARTY_OUTAGE": to_env_bool(st.session_state["third_party_outage"]),
-        "STRICT_RATE_LIMIT": to_env_bool(st.session_state["strict_rate_limit"]),
     }
+    for fault_key, env_var_name in FAULT_ENV_VARS.items():
+        env_vars[env_var_name] = to_env_bool(st.session_state[fault_key])
 
     injection_language = st.session_state["injection_language"]
     payload = st.session_state["payload_text"]
+    run_command_used = env_vars["SPOOLER_RUN_COMMAND"].strip()
+    scenario_summary = build_effective_settings_line()
+    run_status = "recipe_only"
+    compose_ok: bool | None = None
+    compose_output = ""
+    inspect_ok: bool | None = None
+    inspect_output = ""
+    logs_ok: bool | None = None
+    logs_output = ""
+    payload_exit_code: int | None = None
 
     with st.status("Spooling environment...", expanded=True) as status:
         st.write("Generating compose recipe...")
@@ -2328,17 +2664,89 @@ if st.button("Build It", type="primary"):
 
         if st.session_state["spin_now"]:
             st.write("Attempting local docker compose spin-up...")
-            ok, output = run_local_compose(recipe_path)
-            if ok:
+            compose_ok, compose_output = run_local_compose(recipe_path)
+            if compose_ok:
                 st.write("Docker compose spin-up succeeded.")
                 status.update(label="Environment Ready", state="complete", expanded=False)
                 st.success("Local environment is up.")
             else:
                 status.update(label="Recipe Ready (Spin-up failed)", state="error", expanded=True)
                 st.error("Recipe and injection files were created, but local spin-up failed.")
-            st.code(output, language="bash")
+            st.code(compose_output, language="bash")
+
+            st.caption("Local Run Result")
+            st.write(f"Run ID / Container: `{run_id}`")
+            st.write(
+                f"Run command used: `{run_command_used}`"
+                if run_command_used
+                else "Run command used: `(none)`"
+            )
+
+            inspect_ok, inspect_output = inspect_container_state(run_id)
+            if inspect_ok:
+                st.write(f"Container state: `{inspect_output}`")
+            else:
+                st.warning("Unable to inspect container state.")
+                st.code(inspect_output, language="bash")
+
+            logs_ok, logs_output = get_container_logs(run_id)
+            if run_command_used:
+                payload_exit_code = parse_payload_exit_code(logs_output if logs_ok else "")
+                if payload_exit_code is None:
+                    st.warning("Payload execution status is not yet available in container logs.")
+                elif payload_exit_code == 0:
+                    st.success("Payload execution succeeded (exit code 0).")
+                else:
+                    st.error(f"Payload execution failed (exit code {payload_exit_code}).")
+            else:
+                st.info("Payload execution skipped because run command is empty.")
+
+            if logs_ok:
+                st.caption("Container Logs (last 200 lines)")
+                st.code(logs_output or "<no log output>", language="bash")
+            else:
+                st.warning("Unable to fetch container logs.")
+                st.code(logs_output, language="bash")
+
+            if not compose_ok:
+                run_status = "fail"
+            elif run_command_used:
+                if payload_exit_code == 0:
+                    run_status = "pass"
+                elif payload_exit_code is None:
+                    run_status = "unknown"
+                else:
+                    run_status = "fail"
+            else:
+                run_status = "pass"
         else:
             status.update(label="Environment Recipe Ready", state="complete", expanded=False)
+
+    persisted_ok, persist_message = append_run_history_record(
+        {
+            "run_id": run_id,
+            "created_at_utc": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "status": run_status,
+            "selected_preset": st.session_state["selected_preset"],
+            "difficulty_profile": st.session_state["difficulty_profile"],
+            "scenario_summary": scenario_summary,
+            "spin_requested": bool(st.session_state["spin_now"]),
+            "run_command": run_command_used,
+            "container_name": run_id,
+            "recipe_path": to_history_path(recipe_path),
+            "payload_path": to_history_path(payload_path),
+            "bootstrap_path": to_history_path(bootstrap_path),
+            "compose_ok": compose_ok,
+            "compose_output": clamp_persisted_output(compose_output),
+            "inspect_ok": inspect_ok,
+            "inspect_output": clamp_persisted_output(inspect_output),
+            "logs_ok": logs_ok,
+            "logs_output": clamp_persisted_output(logs_output),
+            "payload_exit_code": payload_exit_code,
+        }
+    )
+    if not persisted_ok:
+        st.warning(persist_message)
 
     st.success(f"Environment package written: `{run_id}`")
 
@@ -2373,3 +2781,6 @@ if st.button("Build It", type="primary"):
     )
 
     st.caption(f"Files created: `{recipe_path}` | `{payload_path}` | `{bootstrap_path}`")
+
+st.divider()
+render_run_history_panel()
